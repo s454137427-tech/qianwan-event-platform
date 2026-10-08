@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="theme-color" content="#030713" />
+    <title>确认微信登录 · 前湾 MEGA</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="tech.css?v=20261006" />
+    <link rel="stylesheet" href="future.css?v=20261006-v2" />
+    <link rel="stylesheet" href="readability.css?v=20261006" />
+    <link rel="stylesheet" href="wechat-login.css?v=20261006" />
+    <script src="wechat-login-mobile.js?v=20261006" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="/"
+        ><span class="brand-mark">IN↗</span><span>前湾 MEGA<small>科技造节 · 2026</small></span></a
+      >
+    </header>
+    <main class="scan-shell">
+      <section class="panel">
+        <div class="eyebrow muted">WECHAT SIGN IN</div>
+        <h1 class="page-title" id="scanTitle">确认微信登录</h1>
+        <p id="scanStatus" class="hint" role="status" aria-live="polite">正在读取登录请求…</p>
+        <div id="scanDetails" hidden>
+          <p class="hint">正在请求登录的网站</p>
+          <p id="scanOrigin" class="scan-origin"></p>
+          <div class="scan-code-box">
+            <span>请核对原网页验证码</span><strong id="scanCode"></strong>
+          </div>
+          <p id="scanExpiry" class="hint"></p>
+        </div>
+        <div id="scanAccount" class="scan-account" hidden>
+          <img id="scanAvatar" alt="" width="48" height="48" hidden />
+          <div><span>登录使用的微信账号</span><strong id="scanNickname"></strong></div>
+        </div>
+        <button id="scanAuthorize" class="button mint" hidden>授权微信身份 →</button>
+        <div id="scanActions" class="actions" hidden>
+          <button id="scanApprove" class="button mint">确认登录原网页</button
+          ><button id="scanReject" class="button outline">取消登录</button>
+        </div>
+        <button id="scanRetry" class="button outline" hidden>重新读取登录请求</button>
+        <p class="hint">
+          微信授权不替代报名资料填写，真实姓名和手机号请在报名时填写。只确认自己正在使用的网页。
+        </p>
+        <a class="text-link" href="/#account">返回活动网站 →</a>
+      </section>
+    </main>
+  </body>
+</html>

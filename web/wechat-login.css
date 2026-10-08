@@ -1,0 +1,197 @@
+/* Clear WeChat entry points; no decorative QR substitutes. */
+#loginDialog {
+  max-width: 550px;
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+#loginDialog h2 {
+  margin-top: 10px;
+}
+#loginDialog .tabs {
+  width: 100%;
+}
+#wechatLoginTabs button {
+  flex: 1 1 150px;
+}
+#loginDialog .dialog-close {
+  z-index: 2;
+}
+#loginQrPane {
+  text-align: center;
+}
+.login-qr-frame {
+  width: 256px;
+  height: 256px;
+  margin: 12px auto 16px;
+  padding: 8px;
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#loginQrImage {
+  display: block;
+  width: 240px;
+  height: 240px;
+}
+#loginQrEmpty {
+  padding: 22px;
+  font-size: 16px;
+  line-height: 1.85;
+  color: #33465d;
+}
+.login-qr-frame:has(#loginQrEmpty:not([hidden])) {
+  height: 150px;
+}
+#loginQrStatus {
+  color: #d6e8f9;
+  margin: 12px 0;
+}
+.login-qr-code {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  color: #c3d4e7;
+}
+#loginQrCode {
+  font: 25px/1.6 var(--mono);
+  letter-spacing: 4px;
+  color: #eff7ff;
+}
+#loginQrCountdown {
+  margin: 4px 0 12px;
+  font-size: 14px;
+}
+.login-qr-steps {
+  font-size: 15px;
+  color: #c3d4e7;
+  line-height: 1.8;
+  margin-top: 18px;
+}
+#loginQrRefresh {
+  width: auto;
+}
+#devLoginSection {
+  margin-top: 22px;
+  border-top: 1px solid #40546d;
+  padding-top: 18px;
+}
+#devLoginSection summary {
+  color: #c8d9ec;
+  cursor: pointer;
+  min-height: 44px;
+  font-size: 15px;
+}
+#devLoginSection summary:focus-visible {
+  outline: 3px solid #84eaff;
+  outline-offset: 3px;
+}
+#devLoginSection form {
+  margin-top: 14px;
+}
+#devLoginSection label {
+  margin-bottom: 12px;
+}
+#loginDataNote {
+  font-size: 14px;
+  margin-bottom: 0;
+}
+.login-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+#loginButton > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#loginButton {
+  max-width: 280px;
+  white-space: normal;
+}
+.scan-shell {
+  width: min(540px, calc(100% - 32px));
+  margin: 32px auto 60px;
+}
+.scan-shell .page-title {
+  font-size: 30px;
+  margin-bottom: 20px;
+}
+.scan-shell .actions {
+  margin: 24px 0;
+}
+.scan-shell .actions .button {
+  flex: 1 1 150px;
+}
+.scan-origin {
+  color: #e7f2ff;
+  font-size: 17px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.scan-code-box {
+  margin: 22px 0 12px;
+  background: #172c42;
+  border: 1px solid #587a96;
+  padding: 18px;
+  text-align: center;
+  border-radius: 6px;
+}
+.scan-code-box span {
+  font-size: 15px;
+  display: block;
+  color: #c4d6e8;
+}
+.scan-code-box strong {
+  font: 32px/1.8 var(--mono);
+  letter-spacing: 5px;
+  color: #f0f7ff;
+}
+.scan-account {
+  display: flex;
+  gap: 14px;
+  padding: 18px 0;
+  border-top: 1px solid #40546d;
+  margin-top: 20px;
+  align-items: center;
+}
+.scan-account img {
+  border-radius: 50%;
+  object-fit: cover;
+}
+.scan-account span {
+  display: block;
+  font-size: 14px;
+  color: #b6c6d9;
+}
+.scan-account strong {
+  display: block;
+  font-size: 19px;
+  margin-top: 5px;
+  overflow-wrap: anywhere;
+}
+@media (max-width: 700px) {
+  #loginDialog {
+    padding: 28px 20px;
+  }
+  #loginButton {
+    max-width: min(250px, 55vw);
+  }
+}
+@media (max-width: 360px) {
+  .login-qr-frame {
+    width: 232px;
+    height: 232px;
+    padding: 6px;
+  }
+  #loginQrImage {
+    width: 220px;
+    height: 220px;
+  }
+}

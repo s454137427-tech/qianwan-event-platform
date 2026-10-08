@@ -1,0 +1,43 @@
+# Generate nginx.container.conf with pnpm deploy:prepare; do not edit the generated domain by hand.
+# Place TLS files in deploy/certs/.
+# Both application instances use the same external PostgreSQL, Redis and COS.
+upstream event_api {
+    server app1:3000 max_fails=3 fail_timeout=15s;
+    server app2:3000 max_fails=3 fail_timeout=15s;
+    keepalive 32;
+}
+server {
+    listen 80 default_server;
+    server_name _;
+    return 444;
+}
+server {
+    listen 80;
+    server_name event.example.com;
+    return 301 https://event.example.com$request_uri;
+}
+server {
+    listen 443 ssl default_server;
+    server_name event.example.com;
+    ssl_certificate /etc/nginx/certs/fullchain.pem;
+    ssl_certificate_key /etc/nginx/certs/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    server_tokens off;
+    if ($host != event.example.com) { return 444; }
+    client_max_body_size 8m;
+    client_body_timeout 20s;
+    keepalive_timeout 30s;
+    # Do not log OAuth codes or signed media query strings.
+    access_log off;
+    location / {
+        proxy_pass http://event_api;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 60s;
+        proxy_next_upstream off;
+    }
+}

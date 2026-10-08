@@ -1,0 +1,432 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="theme-color" content="#030713" />
+    <meta
+      name="description"
+      content="前湾 MEGA 2026 科技造节：参与 AI 造物大赛与未来影像大赛，让灵感进入未来。"
+    />
+    <title>万物皆 IN · 前湾 MEGA 科技造节</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="tech.css?v=20261006" />
+    <link rel="stylesheet" href="future.css?v=20261006-v2" />
+    <link rel="stylesheet" href="readability.css?v=20261007" />
+    <script src="vendor/cos.js" defer></script>
+    <link rel="stylesheet" href="wechat-login.css?v=20261006" />
+    <script src="wechat-login-ui.js?v=20261006" defer></script>
+    <script src="app.js" defer></script>
+    <script src="future.js?v=20261006-v2" defer></script>
+  </head>
+  <body>
+    <script src="required-fields.js?v=20261007" defer></script>
+    <canvas id="ambientCanvas" aria-hidden="true"></canvas>
+    <div class="preview-bar" id="previewBar" hidden>
+      建设预览 · 可体验完整流程，请使用虚构报名资料。正式入口计划于 10 月 25 日开放。
+    </div>
+    <header class="site-header">
+      <a class="brand" href="#home"
+        ><span class="brand-mark">IN<span>↗</span></span
+        ><span>前湾 MEGA<small>科技造节 · 2026</small></span></a
+      >
+      <nav aria-label="主导航">
+        <a href="#home">活动首页</a><a href="#participate">我要参与</a><a href="#wall">作品广场</a
+        ><a href="#account">我的参与</a>
+      </nav>
+      <button class="button small" id="loginButton">登录参与 ↗</button>
+    </header>
+    <main>
+      <section data-page="home" class="page">
+        <div class="hero">
+          <div class="hero-copy">
+            <div class="eyebrow">
+              <span class="live-dot"></span> QIANWAN MEGA / TECH FESTIVAL 2026
+            </div>
+            <div class="hero-kicker"><span>AI × HUMAN</span> 上海虹桥前湾 · 科技造节</div>
+            <h1>
+              <span class="hero-title-line">万物皆 <em>IN</em></span
+              ><span class="hero-title-outline">未来，由你创造。</span>
+            </h1>
+            <p>与 AI 一起造物，用影像重新想象生活。<br />让脑洞跳出屏幕，让未来从这里发生。</p>
+            <div class="actions">
+              <a class="button mint" href="#participate">报名 / 投稿 <span>↗</span></a
+              ><a class="text-link" href="#wall">探索作品广场 →</a>
+            </div>
+            <div class="hero-date">
+              <strong>10<span>.</span>25</strong
+              ><span>2026 / 网站计划上线<br />上海虹桥前湾印象城</span>
+            </div>
+          </div>
+          <div class="hero-art" aria-hidden="true">
+            <div class="holo-ring ring-outer"></div>
+            <div class="holo-ring ring-inner"></div>
+            <div class="holo-axis"></div>
+            <span class="art-label top">NEXT DIMENSION / 无限想象</span
+            ><img
+              class="tech-core"
+              src="assets/hero-in-v2.png"
+              alt=""
+              width="600"
+              height="600"
+              fetchpriority="high"
+              decoding="async"
+            /><span class="art-coordinate coordinate-one">AI<br />CREATIVITY</span
+            ><span class="art-coordinate coordinate-two">+</span>
+            <div class="core-caption"><span class="core-marker"></span> 灵感发生 · 万物皆 IN</div>
+            <span class="art-label bottom">BEYOND THE SCREEN — INTO THE FUTURE</span>
+          </div>
+          <div class="hero-rail" aria-hidden="true">
+            <span>01 / 6H 极限造物</span><span>02 / 约 3 分钟未来影像</span
+            ><span>CREATE THE NEXT</span>
+          </div>
+        </div>
+        <div class="ticker" aria-hidden="true">
+          人 IN <span>✳</span> 科技 IN <span>✳</span> 品牌 IN <span>✳</span> 灵感 IN
+          <span>✳</span> 让万物碰个面 <span>↗</span>
+        </div>
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow muted">CHOOSE YOUR NEXT IDEA</div>
+            <h2>两种赛场，同一种好奇。</h2>
+          </div>
+          <p>选择你的参与方式，让灵感从这里发生。</p>
+        </div>
+        <div class="event-grid">
+          <article class="event-card creator-card">
+            <div class="event-top">
+              <span class="pill">01 / AI 造物大赛</span
+              ><span class="event-symbol" aria-hidden="true">⌘</span>
+            </div>
+            <div class="event-visual cube-visual" aria-hidden="true">
+              <svg viewBox="0 0 180 180" fill="none">
+                <path d="M90 16L154 53V127L90 164L26 127V53L90 16Z" />
+                <path d="M26 53L90 90L154 53M90 90V164M90 16V90M26 127L90 90L154 127" />
+                <path d="M90 34L138 62V118L90 146L42 118V62L90 34Z" />
+                <circle cx="90" cy="90" r="14" />
+              </svg>
+            </div>
+            <span class="event-index" aria-hidden="true">01</span>
+            <h3>IN 造极限</h3>
+            <p>6H 极限开造，把脑洞变成作品。<br />个人或团队报名，现场一起接力灵感。</p>
+            <div class="event-tags">
+              <span>个人 / 团队</span><span>现场签到</span><span>成果展示</span>
+            </div>
+            <a class="button dark" href="#participate" data-select-event="creator"
+              >报名造物大赛 ↗</a
+            >
+          </article>
+          <article class="event-card film-card">
+            <div class="event-top">
+              <span class="pill">02 / 未来影像大赛</span
+              ><span class="event-symbol" aria-hidden="true">↗</span>
+            </div>
+            <div class="event-visual film-visual" aria-hidden="true">
+              <svg viewBox="0 0 180 180" fill="none">
+                <path d="M25 32H155V148H25V32Z" />
+                <path d="M39 47H141V133H39V47Z" />
+                <path d="M76 66L115 90L76 114V66Z" />
+                <path
+                  d="M37 23V42M62 23V42M87 23V42M112 23V42M137 23V42M37 138V157M62 138V157M87 138V157M112 138V157M137 138V157"
+                />
+              </svg>
+            </div>
+            <span class="event-index" aria-hidden="true">02</span>
+            <h3>AI 不喊 CUT</h3>
+            <p>现实拍不到的，AI 接着拍。<br />上传你的未来影像，让想象走进屏幕。</p>
+            <div class="event-tags">
+              <span>线上投稿</span><span>审核上墙</span><span>公众票选</span>
+            </div>
+            <a class="button dark" href="#participate" data-select-event="film">上传影像作品 ↗</a>
+          </article>
+        </div>
+        <div class="how-section">
+          <div>
+            <div class="eyebrow muted">FROM IDEA TO REALITY</div>
+            <h2>参与，比想象更简单。</h2>
+          </div>
+          <ol>
+            <li>
+              <b>01</b>
+              <div>
+                <strong>选择赛场</strong>
+                <p>了解两项赛事，找到适合你的创作方式。</p>
+              </div>
+            </li>
+            <li>
+              <b>02</b>
+              <div>
+                <strong>提交报名</strong>
+                <p>保存资料、完成申请，随时查询处理状态。</p>
+              </div>
+            </li>
+            <li>
+              <b>03</b>
+              <div>
+                <strong>让灵感亮相</strong>
+                <p>造物现场开造，影像在线投稿，审核后展示。</p>
+              </div>
+            </li>
+          </ol>
+        </div>
+      </section>
+      <section data-page="participate" class="page content-page" hidden>
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow muted">YOUR IDEA STARTS HERE</div>
+            <h1 class="page-title">报名与投稿</h1>
+          </div>
+          <p>资料可先存草稿，准备好了再提交。</p>
+        </div>
+        <div class="tabs" id="eventTabs">
+          <button data-event="creator" class="active">IN 造极限 · 造物报名</button
+          ><button data-event="film">AI 不喊 CUT · 影像投稿</button>
+        </div>
+        <div class="participation-layout">
+          <div>
+            <form id="applicationForm" class="panel">
+              <div class="panel-heading">
+                <span class="step-number">01</span>
+                <div>
+                  <h2>报名资料</h2>
+                  <p id="applicationState">先登录，再开始填写。</p>
+                </div>
+              </div>
+              <div class="form-grid">
+                <label
+                  >真实姓名<input
+                    name="realName"
+                    maxlength="60"
+                    autocomplete="name"
+                    required /></label
+                ><label
+                  >联系手机号<input
+                    name="phone"
+                    type="tel"
+                    inputmode="tel"
+                    maxlength="11"
+                    autocomplete="tel"
+                    required /></label
+                ><label class="full"
+                  >学校 / 单位（选填）<input name="school" maxlength="120"
+                /></label>
+              </div>
+              <div id="creatorFields">
+                <label
+                  >队名（个人参赛也可以给自己起个队名）<input
+                    name="teamName"
+                    maxlength="80" /></label
+                ><label
+                  >成员名单，每行一人，包含本人<textarea
+                    name="members"
+                    rows="3"
+                    placeholder="请填写实际到场成员姓名"
+                  ></textarea></label
+                ><label
+                  >作品方向 / 设备需求（选填）<textarea
+                    name="equipment"
+                    maxlength="1500"
+                    rows="3"
+                    placeholder="告诉我们你想做什么、需要什么"
+                  ></textarea>
+                </label>
+              </div>
+              <div id="filmFields" hidden>
+                <div class="form-grid">
+                  <label
+                    >身份证明类型<select name="idType">
+                      <option value="">请选择</option>
+                      <option>身份证</option>
+                      <option>学生证</option>
+                      <option>护照</option>
+                    </select></label
+                  ><label
+                    >证件号码<input name="idNumber" maxlength="80" autocomplete="off"
+                  /></label>
+                </div>
+                <label
+                  >身份证明照片 · JPG / PNG，最多 5MB<input
+                    id="identityFile"
+                    aria-describedby="identityHint"
+                    type="file"
+                    accept="image/jpeg,image/png"
+                /></label>
+                <p class="hint" id="identityHint">
+                  仅本人和有权限的审核工作人员可查看，提交后由工作人员核验。
+                </p>
+              </div>
+              <label class="checkbox"
+                ><input name="consent" type="checkbox" required /><span
+                  >我确认报名信息真实，并同意工作人员将上述资料用于赛事联系、资格核验和现场组织。<button
+                    type="button"
+                    class="inline-link"
+                    id="privacyButton"
+                  >
+                    查看说明
+                  </button></span
+                ></label
+              >
+              <div class="actions">
+                <button class="button outline" type="button" id="saveDraft">保存草稿</button
+                ><button class="button dark" type="submit" id="submitApplication">
+                  提交报名 ↗
+                </button>
+              </div>
+              <p id="saveHint" class="hint" role="status" aria-live="polite"></p>
+            </form>
+            <form id="workForm" class="panel">
+              <div class="panel-heading">
+                <span class="step-number">02</span>
+                <div>
+                  <h2>提交创作成果</h2>
+                  <p id="workIntro">造物赛事请在录取与现场签到后提交成果。</p>
+                </div>
+              </div>
+              <label>作品标题<input name="title" maxlength="100" required /></label
+              ><label>展示用创作者名称<input name="author" maxlength="60" required /></label
+              ><label
+                >创作说明<textarea
+                  name="description"
+                  maxlength="3000"
+                  rows="4"
+                  placeholder="作品的想法、使用的 AI 工具，以及你想传达的故事"
+                ></textarea></label
+              ><label id="videoLabel"
+                >视频作品<input
+                  id="videoFile"
+                  aria-describedby="videoHint"
+                  type="file"
+                  accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
+              /></label>
+              <p class="hint" id="videoHint"></p>
+              <div class="upload-progress" id="uploadProgress" hidden>
+                <progress id="progress" max="100" value="0"></progress>
+                <p id="progressText" role="status" aria-live="polite">准备上传</p>
+                <button type="button" class="button small outline" id="pauseUpload">
+                  暂停上传
+                </button>
+              </div>
+              <button class="button dark" type="submit" id="submitWork">上传并提交作品 ↗</button>
+              <p class="hint" id="workHint" role="status" aria-live="polite"></p>
+            </form>
+          </div>
+          <aside class="participation-aside panel">
+            <span class="pill">参与指南</span>
+            <h3 id="eventName">IN 造极限</h3>
+            <p id="eventGuide">
+              提交报名后等待名额确认。录取成功后，在“我的参与”查看签到二维码。现场签到后即可提交成果。
+            </p>
+            <div class="divider"></div>
+            <h4>上传中断了怎么办？</h4>
+            <p>
+              保留原文件，重新选择同一个文件即可继续上传。手机上传期间请保持页面打开，避免锁屏。
+            </p>
+            <h4>提交后去哪看？</h4>
+            <p>在“我的参与”查看报名编号、审核进度和修改意见。</p>
+            <a class="text-link" href="#account">查看我的参与 →</a>
+            <p class="hint" id="rulesNote">
+              当前为建设预览，现场时间、最终名额和赛事细则待确认后公布。
+            </p>
+          </aside>
+        </div>
+      </section>
+      <section data-page="wall" class="page content-page" hidden>
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow muted">IDEAS WORTH SHARING</div>
+            <h1 class="page-title">作品广场</h1>
+          </div>
+          <p>发现作品，也为你喜欢的创作投一票。</p>
+        </div>
+        <div class="tabs" id="wallTabs">
+          <button data-wall="film" class="active">未来影像</button
+          ><button data-wall="creator">造物成果</button>
+        </div>
+        <p class="rule-line" id="wallRules"></p>
+        <div id="worksGrid" class="works-grid"></div>
+        <div class="pagination">
+          <button class="button outline" id="wallPrev">上一页</button><span id="wallPage"></span
+          ><button class="button outline" id="wallNext">下一页</button>
+        </div>
+      </section>
+      <section data-page="account" class="page content-page" hidden>
+        <div class="section-heading">
+          <div>
+            <div class="eyebrow muted">MY PARTICIPATION</div>
+            <h1 class="page-title">我的报名与作品</h1>
+          </div>
+          <button class="button outline" id="refreshAccount">刷新进度 ↻</button>
+        </div>
+        <div id="accountContent"></div>
+      </section>
+    </main>
+    <footer>
+      <a class="brand" href="#home"
+        ><span class="brand-mark">IN↗</span><span>灵感发生 · 万物皆 IN</span></a
+      ><span>上海虹桥前湾印象城 MEGA · 2026 科技造节</span><a href="admin.html">工作人员入口 ↗</a>
+    </footer>
+    <dialog id="loginDialog">
+      <button type="button" class="dialog-close" data-close aria-label="关闭登录窗口">×</button>
+      <div class="eyebrow muted">WECHAT SIGN IN</div>
+      <h2>微信登录</h2>
+      <p id="loginIntro"></p>
+      <div class="tabs" id="wechatLoginTabs" aria-label="选择微信登录方式">
+        <button type="button" data-login-mode="wechat" aria-pressed="false">微信内直接登录</button
+        ><button type="button" data-login-mode="qr" aria-pressed="false">微信扫码登录</button>
+      </div>
+      <section id="loginWechatPane" hidden>
+        <p id="wechatLoginDescription"></p>
+        <a href="/api/auth/wechat" class="button mint" id="wechatLoginButton" hidden
+          >微信授权登录 →</a
+        >
+      </section>
+      <section id="loginQrPane" hidden>
+        <div class="login-qr-frame">
+          <img id="loginQrImage" alt="微信扫码登录二维码" width="240" height="240" hidden />
+          <div id="loginQrEmpty">正在准备登录…</div>
+        </div>
+        <p class="hint" id="loginQrStatus" role="status" aria-live="polite"></p>
+        <div class="login-qr-code" id="loginQrVerification">
+          <span>手机确认时请核对验证码</span><strong id="loginQrCode">—</strong>
+        </div>
+        <p class="hint" id="loginQrCountdown"></p>
+        <button type="button" class="button outline" id="loginQrRefresh">刷新二维码</button>
+        <div class="login-qr-steps">
+          微信扫一扫 → 核对验证码 → 手机确认<br />确认后，当前网页自动登录。
+        </div>
+      </section>
+      <details id="devLoginSection" hidden>
+        <summary>本地体验入口（虚构昵称）</summary>
+        <form id="loginForm">
+          <label id="aliasLabel"
+            >体验昵称<input
+              id="alias"
+              minlength="2"
+              maxlength="30"
+              autocomplete="off"
+              placeholder="例如：灵感接力手"
+              required /></label
+          ><button class="button outline" type="submit" id="devLoginButton">进入本地体验 →</button>
+        </form>
+      </details>
+      <p id="loginHint" class="hint" role="status"></p>
+      <p id="loginDataNote">
+        登录自动识别微信账号，昵称和头像以微信实际授权结果为准；真实姓名和手机号在报名时填写。
+      </p>
+    </dialog>
+    <dialog id="privacyDialog">
+      <button type="button" class="dialog-close" data-close>×</button>
+      <h2>报名材料使用说明</h2>
+      <p>
+        姓名、联系方式、团队信息用于赛事联系与组织；身份证明仅用于资格核验，不展示在作品广场。审核工作人员可依其权限查看材料，系统记录后台操作。
+      </p>
+      <p>
+        作品通过审核后，展示作品标题、创作者名称、创作说明、视频及投票/评分结果。请确保你拥有投稿所需的使用权。
+      </p>
+      <p>
+        当前为建设预览，请使用虚构身份和测试文件。正式开放前会补充实际运营主体、咨询方式、材料保留期限和完整赛事规则。
+      </p>
+    </dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>

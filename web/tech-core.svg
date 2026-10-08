@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="600" viewBox="0 0 600 600" fill="none">
+  <defs>
+    <radialGradient id="halo"><stop stop-color="#00f0c1" stop-opacity=".16"/><stop offset="1" stop-color="#00f0c1" stop-opacity="0"/></radialGradient>
+    <radialGradient id="planet" cx=".35" cy=".3" r=".8"><stop stop-color="#163e3d"/><stop offset=".55" stop-color="#0d2229"/><stop offset="1" stop-color="#080e15"/></radialGradient>
+    <linearGradient id="orbit"><stop stop-color="#80ffe1"/><stop offset=".55" stop-color="#1ccdae"/><stop offset="1" stop-color="#567fff"/></linearGradient>
+    <linearGradient id="letter" x1="230" y1="190" x2="380" y2="410" gradientUnits="userSpaceOnUse"><stop stop-color="#caffef"/><stop offset="1" stop-color="#25d7ba"/></linearGradient>
+    <clipPath id="clip"><circle cx="300" cy="300" r="158"/></clipPath>
+  </defs>
+  <circle cx="300" cy="300" r="290" fill="url(#halo)"/>
+  <g stroke="#345555" stroke-width="1"><circle cx="300" cy="300" r="253" stroke-dasharray="2 12"/><path d="M300 32V61M300 539V568M32 300H61M539 300H568"/><circle cx="300" cy="300" r="226" stroke-opacity=".35"/></g>
+  <ellipse cx="300" cy="300" rx="250" ry="92" transform="rotate(-34 300 300)" stroke="url(#orbit)" stroke-width="1.2"/>
+  <ellipse cx="300" cy="300" rx="215" ry="95" transform="rotate(58 300 300)" stroke="#97a7ff" stroke-opacity=".5"/>
+  <circle cx="300" cy="300" r="158" fill="url(#planet)" stroke="#54d5bc" stroke-opacity=".6"/>
+  <g clip-path="url(#clip)" stroke="#72f8d2" stroke-opacity=".18">
+    <ellipse cx="300" cy="300" rx="40" ry="158"/><ellipse cx="300" cy="300" rx="86" ry="158"/><ellipse cx="300" cy="300" rx="128" ry="158"/>
+    <ellipse cx="300" cy="300" rx="158" ry="35"/><ellipse cx="300" cy="300" rx="158" ry="80"/><ellipse cx="300" cy="300" rx="158" ry="125"/>
+    <path d="M142 300H458M300 142V458"/>
+  </g>
+  <g transform="rotate(-12 300 300)">
+    <path d="M220 225H255V375H220V225ZM280 375V225H315L358 304V225H393V375H359L315 295V375H280Z" fill="#05191a" stroke="url(#letter)" stroke-width="2.5"/>
+    <path d="M231 237H244M231 245H244M231 253H244M371 344H382M371 352H382M371 360H382" stroke="#51dfbf" stroke-opacity=".65"/>
+  </g>
+  <path d="M99 427C125 444 226 424 333 356C434 292 510 220 516 186" stroke="url(#orbit)" stroke-width="2.5"/>
+  <g fill="#abffe6"><circle cx="99" cy="427" r="4"/><circle cx="516" cy="186" r="5"/><circle cx="208" cy="123" r="3"/></g>
+  <g stroke="#b1ffdf"><path d="M463 98V122M451 110H475"/><path d="M109 208V224M101 216H117"/></g>
+  <g stroke="#5e7c7f" stroke-width="1"><path d="M371 135L422 80H497M167 396L113 460H57"/><circle cx="371" cy="135" r="3"/><circle cx="167" cy="396" r="3"/></g>
+  <g fill="#91b8b3" font-family="monospace" font-size="9" letter-spacing="2"><text x="427" y="73">AI × HUMAN</text><text x="58" y="475">UNLIMITED IDEAS</text></g>
+</svg>

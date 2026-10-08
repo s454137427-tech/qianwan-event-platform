@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>赛事工作台 · 前湾 MEGA</title>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="tech.css?v=20261006" />
+    <link rel="stylesheet" href="future.css?v=20261006-v2" />
+    <link rel="stylesheet" href="readability.css?v=20261006" />
+    <script src="admin.js" defer></script>
+  </head>
+  <body>
+    <div class="preview-bar" id="previewBar" hidden>
+      建设预览 · 正式上线前请配置真实身份登录、云资源与赛事规则。
+    </div>
+    <header class="site-header">
+      <a class="brand" href="/"
+        ><span class="brand-mark">IN↗</span><span>前湾 MEGA<small>赛事工作台</small></span></a
+      ><a class="text-link" href="/">返回活动网站 →</a
+      ><button class="button small outline" id="adminLogout" hidden>退出登录</button>
+    </header>
+    <section id="adminLogin" class="panel admin-login">
+      <div class="eyebrow muted">EVENT OPERATIONS</div>
+      <h1 class="page-title">登录赛事工作台</h1>
+      <p class="hint">审核报名、管理作品、评委打分与现场签到。</p>
+      <form id="adminLoginForm">
+        <label>工作人员账号<input name="username" autocomplete="username" required /></label
+        ><label
+          >登录密码<input
+            name="password"
+            type="password"
+            autocomplete="current-password"
+            required /></label
+        ><button class="button dark" type="submit">登录工作台 ↗</button>
+        <p id="adminLoginHint" class="hint" role="status"></p>
+      </form>
+    </section>
+    <main id="adminApp" class="admin-shell" hidden>
+      <div class="admin-top">
+        <div>
+          <div class="eyebrow muted">EVENT OPERATIONS / 2026</div>
+          <h1>赛事工作台</h1>
+          <p id="staffIdentity" class="hint"></p>
+        </div>
+        <button id="reloadAdmin" class="button outline">刷新数据 ↻</button>
+      </div>
+      <div id="stats" class="stat-grid"></div>
+      <div class="tabs" id="adminTabs">
+        <button data-mode="applications" class="active">报名核验</button
+        ><button data-mode="works">作品管理</button><button data-mode="checkin">现场签到</button
+        ><button data-mode="settings">活动设置</button
+        ><button data-mode="storage">视频与存储</button><button data-mode="staff">工作人员</button
+        ><button data-mode="audit">操作记录</button>
+      </div>
+      <section id="listPanel">
+        <div class="admin-controls">
+          <select id="adminCompetition" aria-label="赛事">
+            <option value="creator">IN 造极限 · 造物大赛</option>
+            <option value="film">AI 不喊 CUT · 影像大赛</option></select
+          ><select id="adminStatus" aria-label="状态">
+            <option value="">全部状态</option>
+            <option value="pending">待审核</option>
+            <option value="approved">已通过</option>
+            <option value="rejected">退回修改</option>
+            <option value="draft">草稿</option></select
+          ><a
+            id="exportButton"
+            class="button small outline"
+            href="api/admin/export?competition=creator"
+            >导出报名名单 ↓</a
+          >
+        </div>
+        <div id="adminRows" class="admin-list"></div>
+        <div class="pagination">
+          <button id="adminPrev" class="button outline">上一页</button><span id="adminPage"></span
+          ><button id="adminNext" class="button outline">下一页</button>
+        </div>
+      </section>
+      <section id="checkinPanel" class="panel" hidden>
+        <h2>核验参赛身份</h2>
+        <p class="hint">
+          扫描参与者的签到二维码可打开此页面；也可输入签到码。重复签到会显示已有记录。
+        </p>
+        <form id="checkinForm">
+          <label>签到码<input id="checkinCode" maxlength="100" autocomplete="off" required /></label
+          ><button class="button dark">确认签到 ✓</button>
+        </form>
+        <div id="checkinResult" class="checkin-result" hidden></div>
+      </section>
+      <section id="settingsPanel" class="panel" hidden>
+        <h2>活动开放与名额</h2>
+        <p class="hint">
+          报名名额按造物赛实际成员数计算，审批时检查剩余名额。投票关闭后新投票会被拒绝。
+        </p>
+        <form id="settingsForm">
+          <label
+            >造物赛录取总人数上限<input
+              name="capacity"
+              type="number"
+              min="1"
+              max="10000"
+              required /></label
+          ><label class="checkbox"
+            ><input name="registrationOpen" type="checkbox" /><span>开放报名与投稿</span></label
+          ><label class="checkbox"
+            ><input name="votingOpen" type="checkbox" /><span>开放公众投票</span></label
+          ><button class="button dark">保存设置</button>
+        </form>
+      </section>
+      <section id="staffPanel" class="panel" hidden>
+        <h2>工作人员与权限</h2>
+        <div id="staffList"></div>
+        <div class="divider"></div>
+        <h3>新增账号</h3>
+        <form id="staffForm">
+          <div class="form-grid">
+            <label
+              >账号（英文 / 数字 / 下划线）<input
+                name="username"
+                minlength="3"
+                maxlength="40"
+                required /></label
+            ><label>显示姓名<input name="nickname" maxlength="60" required /></label
+            ><label
+              >角色<select name="role">
+                <option value="reviewer">审核员 · 核验与审核</option>
+                <option value="judge">评委 · 查看作品与打分</option>
+                <option value="checker">签到员 · 现场核销</option>
+                <option value="admin">管理员 · 全部权限</option>
+              </select></label
+            ><label
+              >初始密码（至少16位）<input
+                name="password"
+                type="password"
+                minlength="16"
+                maxlength="128"
+                autocomplete="new-password"
+                required
+            /></label>
+          </div>
+          <button class="button dark">创建工作人员账号</button>
+        </form>
+      </section>
+      <section id="storagePanel" class="panel" hidden>
+        <h2>视频与存储</h2>
+        <p class="hint">
+          查看上传规划容量，提前发现额度不足。这里按文件声明大小统计，包含未完成任务的预留，不代表腾讯云账单；临时副本、转码版本、备份及播放流量需在云控制台另行监控。
+        </p>
+        <div id="storageSummary" class="stat-grid"></div>
+        <progress
+          id="storageMeter"
+          max="100"
+          value="0"
+          aria-label="上传规划容量使用比例"
+        ></progress>
+        <p id="storageStatus" class="hint" role="status"></p>
+        <p id="storageQuota" class="hint"></p>
+        <p id="storageRetention" class="hint"></p>
+        <div id="storageGroups"></div>
+        <form id="storageForm">
+          <label class="checkbox"
+            ><input id="uploadsOpen" type="checkbox" /><span
+              >接收新的上传文件（关闭后，已有上传任务仍可继续）</span
+            ></label
+          ><button class="button dark">保存上传设置</button>
+        </form>
+      </section>
+      <section id="auditPanel" class="panel" hidden>
+        <h2>最近100条操作记录</h2>
+        <div id="auditList"></div>
+      </section>
+    </main>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  </body>
+</html>
