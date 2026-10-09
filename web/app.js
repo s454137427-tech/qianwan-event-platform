@@ -65,7 +65,7 @@ function updateLogin() {
     button.append(image);
   }
   const label = document.createElement('span');
-  label.textContent = state.user ? `${state.user.nickname} · 退出` : '微信登录 ↗';
+  label.textContent = state.user ? `${state.user.nickname} · 退出` : '微信扫码登录 ↗';
   button.append(label);
   $('previewBar').hidden = !state.config?.preview;
 }
@@ -407,16 +407,6 @@ $('loginButton').addEventListener('click', async () => {
     handleError(e);
   }
 });
-$('loginForm').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  try {
-    await finishLogin(
-      await api('/api/auth/dev', { method: 'POST', body: { alias: $('alias').value.trim() } })
-    );
-  } catch (e) {
-    hint('loginHint', e.message, true);
-  }
-});
 document
   .querySelectorAll('[data-select-event]')
   .forEach((a) => a.addEventListener('click', () => switchEvent(a.dataset.selectEvent)));
@@ -589,10 +579,4 @@ window.addEventListener('beforeunload', (e) => {
   updateLogin();
   switchEvent('film');
   await route();
-  if (state.config.wechat && !state.user && /MicroMessenger/i.test(navigator.userAgent)) {
-    const returnTo = ['home', 'participate', 'wall', 'account'].includes(location.hash.slice(1))
-      ? location.hash.slice(1)
-      : 'home';
-    location.replace('/api/auth/wechat?returnTo=' + encodeURIComponent(returnTo));
-  }
 })().catch(handleError);

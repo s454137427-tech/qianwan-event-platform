@@ -23,8 +23,7 @@
     '#applicationForm [name="idNumber"]',
     '#identityFile',
     '#workForm [name="title"]',
-    '#workForm [name="author"]',
-    '#alias'
+    '#workForm [name="author"]'
   ];
   for (const selector of fields) {
     const field = document.querySelector(selector);

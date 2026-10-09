@@ -15,8 +15,8 @@
     <link rel="stylesheet" href="readability.css?v=20261007" />
     <link rel="stylesheet" href="brand.css?v=20261009" />
     <script src="vendor/cos.js" defer></script>
-    <link rel="stylesheet" href="wechat-login.css?v=20261006" />
-    <script src="wechat-login-ui.js?v=20261006" defer></script>
+    <link rel="stylesheet" href="wechat-login.css?v=20261009-qr" />
+    <script src="wechat-login-ui.js?v=20261009-qr" defer></script>
     <script src="app.js" defer></script>
     <script src="future.js?v=20261006-v2" defer></script>
   </head>
@@ -24,7 +24,7 @@
     <script src="required-fields.js?v=20261007" defer></script>
     <canvas id="ambientCanvas" aria-hidden="true"></canvas>
     <div class="preview-bar" id="previewBar" hidden>
-      建设预览 · 可体验完整流程，请使用虚构报名资料。正式入口计划于 10 月 25 日开放。
+      建设预览 · 请使用测试资料。正式入口计划于 10 月 25 日开放。
     </div>
     <header class="site-header">
       <a class="brand" href="#home"
@@ -327,19 +327,12 @@
     <dialog id="loginDialog">
       <button type="button" class="dialog-close" data-close aria-label="关闭登录窗口">×</button>
       <div class="eyebrow muted">WECHAT SIGN IN</div>
-      <h2>微信登录</h2>
+      <h2>微信扫码登录</h2>
       <p id="loginIntro"></p>
-      <div class="tabs" id="wechatLoginTabs" aria-label="选择微信登录方式">
-        <button type="button" data-login-mode="wechat" aria-pressed="false">微信内直接登录</button
-        ><button type="button" data-login-mode="qr" aria-pressed="false">微信扫码登录</button>
-      </div>
-      <section id="loginWechatPane" hidden>
-        <p id="wechatLoginDescription"></p>
-        <a href="/api/auth/wechat" class="button mint" id="wechatLoginButton" hidden
-          >微信授权登录 →</a
-        >
-      </section>
-      <section id="loginQrPane" hidden>
+      <p class="hint" id="loginQrDeviceNote" hidden>
+        若无法扫描本机屏幕，请在电脑或另一台设备打开活动网站，再用手机微信扫码。
+      </p>
+      <section id="loginQrPane">
         <div class="login-qr-frame">
           <img id="loginQrImage" alt="微信扫码登录二维码" width="240" height="240" hidden />
           <div id="loginQrEmpty">正在准备登录…</div>
@@ -354,21 +347,6 @@
           微信扫一扫 → 核对验证码 → 手机确认<br />确认后，当前网页自动登录。
         </div>
       </section>
-      <details id="devLoginSection" hidden>
-        <summary>本地体验入口（虚构昵称）</summary>
-        <form id="loginForm">
-          <label id="aliasLabel"
-            >体验昵称<input
-              id="alias"
-              minlength="2"
-              maxlength="30"
-              autocomplete="off"
-              placeholder="例如：灵感接力手"
-              required /></label
-          ><button class="button outline" type="submit" id="devLoginButton">进入本地体验 →</button>
-        </form>
-      </details>
-      <p id="loginHint" class="hint" role="status"></p>
       <p id="loginDataNote">
         登录自动识别微信账号，昵称和头像以微信实际授权结果为准；真实姓名和手机号在报名时填写。
       </p>

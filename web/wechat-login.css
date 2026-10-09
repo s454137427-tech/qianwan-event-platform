@@ -7,12 +7,6 @@
 #loginDialog h2 {
   margin-top: 10px;
 }
-#loginDialog .tabs {
-  width: 100%;
-}
-#wechatLoginTabs button {
-  flex: 1 1 150px;
-}
 #loginDialog .dialog-close {
   z-index: 2;
 }
@@ -74,27 +68,6 @@
 }
 #loginQrRefresh {
   width: auto;
-}
-#devLoginSection {
-  margin-top: 22px;
-  border-top: 1px solid #40546d;
-  padding-top: 18px;
-}
-#devLoginSection summary {
-  color: #c8d9ec;
-  cursor: pointer;
-  min-height: 44px;
-  font-size: 15px;
-}
-#devLoginSection summary:focus-visible {
-  outline: 3px solid #84eaff;
-  outline-offset: 3px;
-}
-#devLoginSection form {
-  margin-top: 14px;
-}
-#devLoginSection label {
-  margin-bottom: 12px;
 }
 #loginDataNote {
   font-size: 14px;

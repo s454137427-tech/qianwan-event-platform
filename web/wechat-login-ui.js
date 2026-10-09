@@ -9,7 +9,6 @@
     ticket,
     creating;
   const byId = (id) => document.getElementById(id);
-  const inWechat = /MicroMessenger/i.test(navigator.userAgent);
   const api = async (url, method = 'GET', body) => {
     const response = await fetch(url, {
       method,
@@ -101,8 +100,8 @@
     byId('loginQrCode').textContent = '—';
     byId('loginQrCountdown').textContent = '';
     if (!config.wechat) {
-      byId('loginQrEmpty').textContent = '微信扫码登录待接入';
-      message('接入活动公众号后，这里将显示可扫描的登录二维码。');
+      byId('loginQrEmpty').textContent = '扫码登录暂未开放';
+      message('扫码入口尚未开放，请等待活动正式上线。');
       byId('loginQrRefresh').disabled = true;
       return;
     }
@@ -129,23 +128,6 @@
       if (generation === epoch && config.wechat) byId('loginQrRefresh').disabled = false;
     }
   }
-  function mode(name) {
-    stop();
-    byId('wechatLoginTabs')
-      .querySelectorAll('button')
-      .forEach((b) => {
-        const active = b.dataset.loginMode === name;
-        b.classList.toggle('active', active);
-        b.setAttribute('aria-pressed', String(active));
-      });
-    byId('loginWechatPane').hidden = name !== 'wechat';
-    byId('loginQrPane').hidden = name !== 'qr';
-    if (name === 'qr') startQr();
-  }
-  byId('wechatLoginTabs').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-login-mode]');
-    if (b) mode(b.dataset.loginMode);
-  });
   byId('loginQrRefresh').addEventListener('click', startQr);
   byId('loginDialog').addEventListener('close', stop);
   window.eventWechatLogin = {
@@ -153,19 +135,11 @@
       config = options.config;
       onSuccess = options.onSuccess;
       destination = options.returnTo || 'account';
-      byId('devLoginSection').hidden = !config.devLogin;
-      byId('wechatLoginButton').hidden = !config.wechat || !inWechat;
-      byId('wechatLoginButton').href =
-        '/api/auth/wechat?returnTo=' + encodeURIComponent(destination);
-      byId('loginIntro').textContent = '微信内可直接授权；浏览器中可用手机微信扫码登录。';
-      byId('wechatLoginDescription').textContent = inWechat
-        ? config.wechat
-          ? '授权后自动识别微信账号，并读取微信允许提供的信息。'
-          : '微信内授权登录待接入活动公众号。'
-        : '请在手机微信中打开活动链接，即可授权登录。电脑或其他浏览器请切换到“微信扫码登录”。';
-      byId('loginHint').textContent = '';
+      byId('loginIntro').textContent =
+        '请用手机微信扫描二维码，核对验证码并确认。确认后，本页面会自动登录。';
+      byId('loginQrDeviceNote').hidden = !/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
       byId('loginDialog').showModal();
-      mode(inWechat ? 'wechat' : 'qr');
+      startQr();
     }
   };
 })();

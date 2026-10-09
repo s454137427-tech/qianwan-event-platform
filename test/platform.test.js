@@ -547,6 +547,32 @@ test('WeChat OAuth and QR login bind the browser, require confirmation, expire a
     const browser = new Client(),
       phone = new Client(),
       guest = new Client();
+    assert.equal((await guest.request('/api/auth/wechat?returnTo=wall')).status, 404);
+    assert.equal((await phone.request('/api/auth/wechat/prepare', 'POST', {})).status, 400);
+    assert.equal(
+      (await phone.request('/api/auth/wechat/prepare', 'POST', { ticket: 'invalid' })).status,
+      400
+    );
+    const retired = new Client(),
+      legacyState = 'retired-direct-oauth-state';
+    retired.cookie = `oauth_state=${legacyState}`;
+    await platform.db.query(
+      'INSERT INTO wechat_oauth_states(state_hash,scan_hash,destination,expires_at) VALUES($1,$2,$3,$4)',
+      [
+        crypto.createHash('sha256').update(legacyState).digest('hex'),
+        null,
+        'account',
+        Date.now() + 60000
+      ]
+    );
+    assert.equal(
+      (
+        await retired.request(`/api/auth/wechat/callback?state=${legacyState}&code=test-code`)
+      ).headers.get('location'),
+      '/wechat-login.html#error=authorization'
+    );
+    assert.equal((await retired.ok('/api/session')).user, null);
+    assert.equal(providerCalls, 0);
     const qr = await browser.ok('/api/auth/qr', 'POST', { returnTo: 'wall' });
     assert.match(qr.qrImage, /^data:image\/png;base64,/);
     assert.equal((await guest.request(`/api/auth/qr/${qr.id}`)).status, 404);
