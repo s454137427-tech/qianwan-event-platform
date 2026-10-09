@@ -18,6 +18,7 @@ const files = [
   'test/deployment.test.js',
   'test/storage.test.js',
   'test/stability.test.js',
+  'test/archive.test.js',
   'package.json',
   'pnpm-lock.yaml',
   'pnpm-workspace.yaml',

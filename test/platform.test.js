@@ -819,6 +819,168 @@ test('repeated shutdown shares cleanup and preserves resource failures', async (
   assert.equal(databaseCloses, 1);
 });
 
+test('event archives restrict access, preserve records, redact client data and retain private internal fields', async () => {
+  const { inflateRawSync } = require('node:zlib');
+  const unpack = (buffer) => {
+    const files = new Map();
+    let offset = 0;
+    while (buffer.readUInt32LE(offset) === 0x04034b50) {
+      const size = buffer.readUInt32LE(offset + 18),
+        length = buffer.readUInt16LE(offset + 26);
+      const start = offset + 30 + length + buffer.readUInt16LE(offset + 28);
+      files.set(
+        buffer.subarray(offset + 30, offset + 30 + length).toString(),
+        inflateRawSync(buffer.subarray(start, start + size)).toString()
+      );
+      offset = start + size;
+    }
+    return files;
+  };
+  assert.equal((await new Client().request('/api/admin/export/archive')).status, 401);
+  assert.equal((await outsider.request('/api/admin/export/archive')).status, 403);
+  await admin.ok('/api/admin/staff', 'POST', {
+    username: 'archive_reviewer',
+    nickname: '归档审核员',
+    role: 'reviewer',
+    password: 'archive-reviewer-test-2026'
+  });
+  const reviewer = new Client();
+  await reviewer.ok('/api/auth/admin', 'POST', {
+    username: 'archive_reviewer',
+    password: 'archive-reviewer-test-2026'
+  });
+  assert.equal((await reviewer.request('/api/admin/export/archive')).status, 403);
+  assert.equal((await admin.request('/api/admin/export/archive?scope=invalid')).status, 400);
+  const fixture = await participant('ArchiveFixture');
+  const user = (await fixture.ok('/api/session')).user,
+    actor = (await admin.ok('/api/session')).user;
+  const aid = crypto.randomUUID(),
+    wid = crypto.randomUUID(),
+    old = crypto.randomUUID(),
+    now = Date.now();
+  await platform.db.query(
+    'INSERT INTO applications(id,user_id,competition,payload,status,note,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7,$8)',
+    [
+      aid,
+      user.id,
+      'film',
+      JSON.stringify({
+        realName: '王小明',
+        phone: '13812345678',
+        school: '=HYPERLINK("https://example.org")',
+        idType: '身份证',
+        idNumber: '310101200001011234',
+        identityId,
+        consent: true
+      }),
+      'approved',
+      '仅内部核验备注',
+      now,
+      now
+    ]
+  );
+  await platform.db.query(
+    'INSERT INTO works(id,user_id,competition,title,author,description,video_id,status,votes,created_at,updated_at,submission_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)',
+    [
+      wid,
+      user.id,
+      'film',
+      '=ArchiveTitle',
+      '公开笔名',
+      '测试说明',
+      videoId,
+      'approved',
+      10,
+      now,
+      now,
+      wid
+    ]
+  );
+  await platform.db.query(
+    'INSERT INTO scores(work_id,judge_id,score,updated_at) VALUES($1,$2,$3,$4)',
+    [wid, actor.id, 80, now]
+  );
+  await platform.db.query(
+    'INSERT INTO applications(id,user_id,competition,payload,status,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7)',
+    [old, user.id, 'creator', '{"realName":"取消活动不导出"}', 'approved', now, now]
+  );
+  for (let i = 0; i < 101; i++)
+    await platform.db.query(
+      'INSERT INTO audit(id,actor_id,action,target_id,detail,created_at) VALUES($1,$2,$3,$4,$5,$6)',
+      [
+        crypto.randomUUID(),
+        actor.id,
+        'application.review',
+        aid,
+        JSON.stringify({
+          status: 'approved',
+          note: '仅内部核验备注',
+          password: '禁止归档的密码字段'
+        }),
+        now + i
+      ]
+    );
+  const download = async (scope) => {
+    const response = await fetch(
+      origin + `/api/admin/export/archive${scope ? '?scope=' + scope : ''}`,
+      { headers: { Cookie: admin.cookie } }
+    );
+    assert.equal(response.status, 200);
+    assert.equal(response.headers.get('content-type'), 'application/zip');
+    assert.match(response.headers.get('cache-control'), /no-store/);
+    return unpack(Buffer.from(await response.arrayBuffer()));
+  };
+  const client = await download(),
+    internal = await download('internal');
+  const clientText = [...client.values()].join('\n'),
+    internalText = [...internal.values()].join('\n');
+  assert.match(clientText, /王\*\*/);
+  assert.match(clientText, /138\*\*\*\*5678/);
+  for (const value of [
+    '王小明',
+    '13812345678',
+    '310101200001011234',
+    '仅内部核验备注',
+    identityId,
+    '取消活动不导出',
+    '禁止归档的密码字段'
+  ])
+    assert.ok(!clientText.includes(value), value);
+  for (const value of ['王小明', '13812345678', '310101200001011234', '仅内部核验备注', identityId])
+    assert.ok(internalText.includes(value), value);
+  assert.ok(!internalText.includes('禁止归档的密码字段'));
+  assert.match(client.get('02-报名与审核.csv'), /'\=HYPERLINK/);
+  assert.match(client.get('03-作品与成绩.csv'), /'\=ArchiveTitle/);
+  const line = client
+    .get('03-作品与成绩.csv')
+    .split('\r\n')
+    .find((r) => r.includes(wid));
+  assert.match(line, /"10","1","80.0","100.0","88.0"/);
+  const manifest = JSON.parse(client.get('校验清单.json'));
+  assert.ok(manifest.recordCounts['07-操作记录.csv'] > 100);
+  assert.equal(
+    manifest.recordCounts['02-报名与审核.csv'],
+    Number(
+      (
+        await platform.db.query(
+          "SELECT COUNT(*) AS count FROM applications WHERE competition='film'"
+        )
+      ).rows[0].count
+    )
+  );
+  for (const f of manifest.files)
+    assert.equal(crypto.createHash('sha256').update(client.get(f.name)).digest('hex'), f.sha256);
+  const events = (
+    await platform.db.query(
+      "SELECT detail FROM audit WHERE action='archive.export' ORDER BY created_at"
+    )
+  ).rows;
+  assert.deepEqual(
+    events.map((r) => JSON.parse(r.detail).scope),
+    ['client', 'internal']
+  );
+});
+
 test('domain verification serves only expected text files and health endpoints stay available', async () => {
   await fs.mkdir(platform.config.verificationDir, { recursive: true });
   await fs.writeFile(

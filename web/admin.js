@@ -70,7 +70,8 @@ function allowed(mode) {
     settings: ['admin'],
     storage: ['admin'],
     staff: ['admin'],
-    audit: ['admin']
+    audit: ['admin'],
+    archive: ['admin']
   }[mode].includes(state.user.role);
 }
 async function openApp() {
@@ -92,7 +93,7 @@ async function render() {
     .querySelectorAll('button')
     .forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
   $('listPanel').hidden = !['applications', 'works'].includes(mode);
-  for (const name of ['settings', 'storage', 'staff', 'audit'])
+  for (const name of ['settings', 'storage', 'staff', 'audit', 'archive'])
     $(`${name}Panel`).hidden = name !== mode;
   if (['applications', 'works'].includes(mode)) return loadList();
   if (mode === 'staff')
@@ -315,6 +316,51 @@ $('storageForm').addEventListener(
       toast('上传设置已保存');
     } finally {
       button.disabled = false;
+    }
+  })
+);
+$('archivePanel').addEventListener(
+  'click',
+  guarded(async (event) => {
+    const button = event.target.closest('[data-archive]');
+    if (!button || button.disabled) return;
+    const buttons = $('archivePanel').querySelectorAll('[data-archive]');
+    buttons.forEach((b) => (b.disabled = true));
+    const scope = button.dataset.archive;
+    $('archiveStatus').textContent = '正在生成归档，请稍候…';
+    try {
+      const response = await fetch(`/api/admin/export/archive?scope=${scope}`, {
+        signal: AbortSignal.timeout(60000)
+      });
+      if (!response.ok) {
+        if (response.status === 401) showLogin();
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || '归档生成失败，请稍后重试');
+      }
+      if (!response.headers.get('Content-Type')?.startsWith('application/zip'))
+        throw new Error('归档未完成，请重新登录后重试');
+      const blob = await response.blob();
+      if (!blob.size) throw new Error('归档文件为空，请稍后重试');
+      const url = URL.createObjectURL(blob),
+        link = document.createElement('a');
+      link.href = url;
+      link.download =
+        response.headers.get('Content-Disposition')?.match(/filename="([^"]+)"/)?.[1] ||
+        `qianwan-film-${scope}.zip`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+      $('archiveStatus').textContent =
+        `${scope === 'client' ? '甲方备案包' : '内部留存包'}已生成并发起下载，请在浏览器下载列表查看。`;
+    } catch (error) {
+      $('archiveStatus').textContent =
+        error.name === 'TimeoutError'
+          ? '生成等待超时，请稍后重试；较大规模数据请联系负责人安排数据库备份。'
+          : error.message;
+      throw new Error($('archiveStatus').textContent);
+    } finally {
+      buttons.forEach((b) => (b.disabled = false));
     }
   })
 );

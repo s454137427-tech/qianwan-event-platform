@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="future.css?v=20261006-v2" />
     <link rel="stylesheet" href="readability.css?v=20261006" />
     <link rel="stylesheet" href="brand.css?v=20261009" />
-    <script src="admin.js?v=2.2.2" defer></script>
+    <script src="admin.js?v=2.2.3" defer></script>
   </head>
   <body>
     <div class="preview-bar" id="previewBar" hidden>
@@ -57,7 +57,7 @@
         <button data-mode="applications" class="active">报名核验</button
         ><button data-mode="works">作品管理</button><button data-mode="settings">活动设置</button
         ><button data-mode="storage">视频与存储</button><button data-mode="staff">工作人员</button
-        ><button data-mode="audit">操作记录</button>
+        ><button data-mode="audit">操作记录</button><button data-mode="archive">数据导出</button>
       </div>
       <section id="listPanel">
         <div class="admin-controls">
@@ -149,6 +149,39 @@
             ></label
           ><button class="button dark">保存上传设置</button>
         </form>
+      </section>
+      <section id="archivePanel" class="panel" hidden>
+        <p class="eyebrow">活动结束后的留存与交接</p>
+        <h2>数据导出</h2>
+        <p class="hint">
+          一键打包本活动的全部记录，不受报名或作品列表筛选影响。解压后可用 Excel 打开表格。
+        </p>
+        <div class="form-grid">
+          <article class="admin-record">
+            <h3>甲方备案</h3>
+            <p>
+              活动汇总、报名与审核结果、作品与实时成绩、评委评分、投票记录、视频清单及操作记录。
+            </p>
+            <p class="hint">
+              姓名和手机号脱敏，隐藏证件号码、身份证明文件、审核备注与私有存储路径。
+            </p>
+            <button class="button mint" data-archive="client">下载甲方备案包 ↓</button>
+          </article>
+          <article class="admin-record">
+            <h3>内部留存</h3>
+            <p>
+              同一套活动记录，另含完整联系方式、证件号码、审核备注及关联文件的存储路径，便于后续核对。
+            </p>
+            <p class="hint">含个人信息，由授权负责人保管。账号密码、登录令牌和云密钥不会导出。</p>
+            <button class="button outline" data-archive="internal">下载内部留存包 ↓</button>
+          </article>
+        </div>
+        <p class="hint">
+          结束后请先在“活动设置”关闭报名投稿与投票，完成评分，再导出备案。成绩按导出时间记录，不代表最终获奖名单；视频和证明原文件请另行备份。
+        </p>
+        <p id="archiveStatus" class="hint" role="status" aria-live="polite">
+          每个归档包附统计时间、字段说明和文件校验清单，方便留存核对。
+        </p>
       </section>
       <section id="auditPanel" class="panel" hidden>
         <h2>最近100条操作记录</h2>
