@@ -19,8 +19,6 @@
   const fields = [
     '#applicationForm [name="realName"]',
     '#applicationForm [name="phone"]',
-    '#applicationForm [name="teamName"]',
-    '#applicationForm [name="members"]',
     '#applicationForm [name="idType"]',
     '#applicationForm [name="idNumber"]',
     '#identityFile',
@@ -39,19 +37,6 @@
 
   const video = document.getElementById('videoFile');
   const videoMark = marker();
-  const videoOptional = document.createElement('span');
-  videoOptional.className = 'field-optional';
-  videoOptional.textContent = '（选填）';
-  video.before(videoMark, videoOptional);
-  function updateVideoRequirement() {
-    const required = !document.getElementById('filmFields').hidden;
-    videoMark.hidden = !required;
-    videoOptional.hidden = required;
-    video.setAttribute('aria-required', String(required));
-  }
-  new MutationObserver(updateVideoRequirement).observe(document.getElementById('filmFields'), {
-    attributes: true,
-    attributeFilter: ['hidden']
-  });
-  updateVideoRequirement();
+  video.before(videoMark);
+  video.setAttribute('aria-required', 'true');
 })();

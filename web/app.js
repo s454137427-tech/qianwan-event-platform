@@ -6,13 +6,13 @@ const esc = (value) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
   );
 const labels = { draft: '草稿', pending: '待审核', approved: '已通过', rejected: '退回修改' };
-const events = { creator: 'IN 造极限 · AI 造物大赛', film: 'AI 不喊 CUT · 未来影像大赛' };
+const events = { film: 'AI 不喊 CUT · 未来影像大赛' };
 const state = {
   config: null,
   user: null,
   csrf: null,
   me: null,
-  event: 'creator',
+  event: 'film',
   wall: 'film',
   page: 1,
   editWork: null,
@@ -103,12 +103,6 @@ function payload() {
     realName: f.elements.realName.value.trim(),
     phone: f.elements.phone.value.trim(),
     school: f.elements.school.value.trim(),
-    teamName: f.elements.teamName.value.trim(),
-    members: f.elements.members.value
-      .split('\n')
-      .map((v) => v.trim())
-      .filter(Boolean),
-    equipment: f.elements.equipment.value.trim(),
     idType: f.elements.idType.value,
     idNumber: f.elements.idNumber.value.trim(),
     identityId:
@@ -125,9 +119,8 @@ function populateApplication() {
     p = row?.payload || {};
   form.reset();
   $('identityFile').value = '';
-  for (const name of ['realName', 'phone', 'school', 'teamName', 'equipment', 'idType', 'idNumber'])
+  for (const name of ['realName', 'phone', 'school', 'idType', 'idNumber'])
     form.elements[name].value = p[name] || '';
-  form.elements.members.value = (p.members || []).join('\n');
   form.elements.consent.checked = !!p.consent;
   const locked = !!row && ['pending', 'approved'].includes(row.status);
   for (const input of form.querySelectorAll('input,textarea,select')) input.disabled = locked;
@@ -149,6 +142,7 @@ function populateApplication() {
     $('workForm').elements.author.value = state.user.nickname;
 }
 function switchEvent(type) {
+  if (type !== 'film') return;
   if (state.busy) {
     toast('正在保存，请完成或暂停当前上传后再切换赛事。');
     return;
@@ -157,20 +151,10 @@ function switchEvent(type) {
   state.event = type;
   state.editWork = null;
   state.submissionKey = null;
-  $('creatorFields').hidden = type !== 'creator';
-  $('filmFields').hidden = type !== 'film';
-  $('eventTabs')
-    .querySelectorAll('button')
-    .forEach((b) => b.classList.toggle('active', b.dataset.event === type));
   $('eventName').textContent = events[type];
   $('eventGuide').textContent =
-    type === 'creator'
-      ? '提交报名后等待名额确认。录取成功后，在“我的参与”查看签到二维码。现场签到后可提交创作成果。'
-      : '先提交身份材料，再上传影像作品。资格核验与作品审核通过后，作品进入公开广场。';
-  $('workIntro').textContent =
-    type === 'creator'
-      ? '造物赛事请在录取与现场签到后提交成果，视频可选。'
-      : '请先提交上方报名资料。作品通过审核后公开展示。';
+    '先提交身份材料，再上传影像作品。资格核验与作品审核通过后，作品进入公开广场。';
+  $('workIntro').textContent = '请先提交上方报名资料。作品通过审核后公开展示。';
   $('videoHint').textContent =
     `影像作品建议约 ${Math.round((state.config?.expectedVideoSeconds || 180) / 60)} 分钟，单个文件最多 ${state.config?.maxVideoMb || 500}MB。\n支持 MP4 / MOV / WebM；推荐 MP4（H.264 视频 / AAC 音频）。\n每账号累计最多 ${state.config?.uploadQuotaMb || 3072}MB、${state.config?.uploadMaxFiles || 50} 个文件。上传中断后，重新选择原文件即可继续。`;
   $('workForm').reset();
@@ -348,7 +332,7 @@ function renderAccount() {
   const applications = state.me?.applications || [],
     works = state.me?.works || [];
   $('accountContent').innerHTML =
-    `<div class="section-heading"><h2>我的报名</h2></div><div class="account-grid">${applications.length ? applications.map((a) => `<article class="panel record">${statusTag(a.status)}<h3>${esc(events[a.competition])}</h3><p>编号：${esc(a.id)}</p><p>${esc(a.payload.teamName || a.payload.realName || '草稿资料')} ${a.competition === 'creator' ? `· ${a.seat_count} 人` : ''}</p>${a.note ? `<p class="hint error">修改意见：${esc(a.note)}</p>` : ''}${a.checkin_code && a.status === 'approved' ? `<img class="qr" src="api/me/applications/${a.id}/qr" alt="工作人员签到二维码"><p class="code">签到码 ${esc(a.checkin_code)}</p><p>${a.checked_at ? '已完成现场签到' : '到场后请出示此码，由工作人员核验。'}</p>` : ''}${a.payload.identityId ? `<p><a class="inline-link" href="api/media/${a.payload.identityId}" target="_blank" rel="noopener">查看我提交的身份照片 ↗</a></p>` : ''}<div class="actions"><button class="button small outline" data-edit-application="${a.competition}">${['draft', 'rejected'].includes(a.status) ? '继续填写' : '查看报名'}</button></div></article>`).join('') : '<div class="empty"><h3>还没有报名记录</h3><a href="#participate" class="button dark">选择赛事 ↗</a></div>'}</div><div class="section-heading"><h2>我的作品</h2></div><div class="account-grid">${works.length ? works.map((w) => `<article class="panel record">${statusTag(w.status)}<h3>${esc(w.title)}</h3><p>${esc(events[w.competition])} · ${esc(w.author)}</p><p>作品编号：${esc(w.id)}</p>${w.note ? `<p class="hint error">修改意见：${esc(w.note)}</p>` : ''}${w.video_id ? `<p><a class="inline-link" href="api/media/${w.video_id}" target="_blank" rel="noopener">查看我的视频 ↗</a></p>` : ''}${w.status === 'rejected' ? `<button class="button small outline" data-edit-work="${w.id}">修改并重新提交</button>` : ''}</article>`).join('') : '<div class="empty"><p>作品提交后，审核进度会显示在这里。</p></div>'}</div>`;
+    `<div class="section-heading"><h2>我的报名</h2></div><div class="account-grid">${applications.length ? applications.map((a) => `<article class="panel record">${statusTag(a.status)}<h3>${esc(events[a.competition])}</h3><p>编号：${esc(a.id)}</p><p>${esc(a.payload.realName || '草稿资料')} </p>${a.note ? `<p class="hint error">修改意见：${esc(a.note)}</p>` : ''}${a.payload.identityId ? `<p><a class="inline-link" href="api/media/${a.payload.identityId}" target="_blank" rel="noopener">查看我提交的身份照片 ↗</a></p>` : ''}<div class="actions"><button class="button small outline" data-edit-application="${a.competition}">${['draft', 'rejected'].includes(a.status) ? '继续填写' : '查看报名'}</button></div></article>`).join('') : '<div class="empty"><h3>还没有报名记录</h3><a href="#participate" class="button dark">报名影像大赛 ↗</a></div>'}</div><div class="section-heading"><h2>我的作品</h2></div><div class="account-grid">${works.length ? works.map((w) => `<article class="panel record">${statusTag(w.status)}<h3>${esc(w.title)}</h3><p>${esc(events[w.competition])} · ${esc(w.author)}</p><p>作品编号：${esc(w.id)}</p>${w.note ? `<p class="hint error">修改意见：${esc(w.note)}</p>` : ''}${w.video_id ? `<p><a class="inline-link" href="api/media/${w.video_id}" target="_blank" rel="noopener">查看我的视频 ↗</a></p>` : ''}${w.status === 'rejected' ? `<button class="button small outline" data-edit-work="${w.id}">修改并重新提交</button>` : ''}</article>`).join('') : '<div class="empty"><p>作品提交后，审核进度会显示在这里。</p></div>'}</div>`;
 }
 async function loadWall() {
   $('wallRules').textContent = state.config.rules[state.wall];
@@ -436,9 +420,6 @@ $('loginForm').addEventListener('submit', async (e) => {
 document
   .querySelectorAll('[data-select-event]')
   .forEach((a) => a.addEventListener('click', () => switchEvent(a.dataset.selectEvent)));
-$('eventTabs').addEventListener('click', (e) => {
-  if (e.target.dataset.event && !state.busy) switchEvent(e.target.dataset.event);
-});
 $('applicationForm').addEventListener('input', () => {
   clearTimeout(saveTimer);
   if (!state.user || state.busy) return;
@@ -492,8 +473,6 @@ $('workForm').addEventListener('submit', async (e) => {
   const row = state.me?.applications.find((a) => a.competition === state.event);
   if (!row || !['approved', 'pending'].includes(row.status))
     return hint('workHint', '请先提交上方报名资料。', true);
-  if (state.event === 'creator' && (!row.checked_at || row.status !== 'approved'))
-    return hint('workHint', '造物赛事需先完成名额确认和现场签到。', true);
   const form = $('workForm'),
     file = $('videoFile').files[0];
   if (!file && state.event === 'film' && !state.editWork?.video_id)
@@ -532,15 +511,6 @@ $('workForm').addEventListener('submit', async (e) => {
     $('submitWork').disabled = false;
     $('submitWork').textContent = '上传并提交作品 ↗';
   }
-});
-$('wallTabs').addEventListener('click', (e) => {
-  if (!e.target.dataset.wall) return;
-  state.wall = e.target.dataset.wall;
-  state.page = 1;
-  $('wallTabs')
-    .querySelectorAll('button')
-    .forEach((b) => b.classList.toggle('active', b === e.target));
-  loadWall().catch(handleError);
 });
 $('wallPrev').addEventListener('click', () => {
   state.page--;
@@ -617,7 +587,7 @@ window.addEventListener('beforeunload', (e) => {
   state.csrf = session.csrf;
   await refreshMe();
   updateLogin();
-  switchEvent('creator');
+  switchEvent('film');
   await route();
   if (state.config.wechat && !state.user && /MicroMessenger/i.test(navigator.userAgent)) {
     const returnTo = ['home', 'participate', 'wall', 'account'].includes(location.hash.slice(1))

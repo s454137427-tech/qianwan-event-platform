@@ -6,7 +6,7 @@ const $ = (id) => document.getElementById(id),
       (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
     );
 const label = { draft: '草稿', pending: '待审核', approved: '已通过', rejected: '退回修改' },
-  roles = { admin: '管理员', reviewer: '审核员', judge: '评委', checker: '签到员' };
+  roles = { admin: '管理员', reviewer: '审核员', judge: '评委' };
 const state = { user: null, csrf: null, mode: 'applications', page: 1, overview: null };
 let toastTimer;
 function toast(message) {
@@ -45,20 +45,18 @@ async function refreshOverview() {
     { title: '待核验报名', value: count(o.applications, 'pending') },
     { title: '待审核作品', value: count(o.works, 'pending') },
     { title: '公开展示作品', value: count(o.works, 'approved') },
-    { title: `造物已录取 / ${o.settings.capacity} 人`, value: o.seats }
+    { title: '已核验报名', value: count(o.applications, 'approved') }
   ]
     .map((v) => `<div class="stat-card"><span>${v.title}</span><strong>${v.value}</strong></div>`)
     .join('');
   const f = $('settingsForm');
-  f.elements.capacity.value = o.settings.capacity;
   f.elements.registrationOpen.checked = o.settings.registrationOpen === 'true';
   f.elements.votingOpen.checked = o.settings.votingOpen === 'true';
 }
 function allowed(mode) {
   return {
-    applications: ['admin', 'reviewer', 'checker'],
+    applications: ['admin', 'reviewer'],
     works: ['admin', 'reviewer', 'judge'],
-    checkin: ['admin', 'reviewer', 'checker'],
     settings: ['admin'],
     storage: ['admin'],
     staff: ['admin'],
@@ -75,11 +73,6 @@ async function openApp() {
     .querySelectorAll('[data-mode]')
     .forEach((b) => (b.hidden = !allowed(b.dataset.mode)));
   if (!allowed(state.mode)) state.mode = state.user.role === 'judge' ? 'works' : 'applications';
-  const code = new URLSearchParams(location.search).get('checkin');
-  if (code && allowed('checkin')) {
-    $('checkinCode').value = code;
-    state.mode = 'checkin';
-  }
   await refreshOverview();
   await render();
 }
@@ -89,7 +82,7 @@ async function render() {
     .querySelectorAll('button')
     .forEach((b) => b.classList.toggle('active', b.dataset.mode === mode));
   $('listPanel').hidden = !['applications', 'works'].includes(mode);
-  for (const name of ['checkin', 'settings', 'storage', 'staff', 'audit'])
+  for (const name of ['settings', 'storage', 'staff', 'audit'])
     $(`${name}Panel`).hidden = name !== mode;
   if (['applications', 'works'].includes(mode)) return loadList();
   if (mode === 'staff')
@@ -130,7 +123,7 @@ async function loadList() {
           let body;
           if (mode === 'applications') {
             const p = r.payload;
-            body = `<h3>${esc(p.teamName || p.realName || '未命名草稿')}</h3><p>${esc(p.realName)} · ${esc(p.phone)} · ${esc(p.school)}</p><p>编号 ${esc(r.id)}</p>${r.competition === 'creator' ? `<p>${r.seat_count} 人 · ${esc((p.members || []).join(' / '))}</p><p>${esc(p.equipment)}</p><p>${r.checked_at ? '已签到' : '未签到'} ${esc(r.checkin_code || '')}</p>` : `<p>${esc(p.idType)} · ${esc(p.idNumber)}</p>${p.identityId ? `<a href="api/media/${p.identityId}" target="_blank" rel="noopener"><img class="identity-preview" src="api/media/${p.identityId}" alt="私有身份证明材料"></a>` : ''}`}`;
+            body = `<h3>${esc(p.realName || '未命名草稿')}</h3><p>${esc(p.realName)} · ${esc(p.phone)} · ${esc(p.school)}</p><p>编号 ${esc(r.id)}</p><p>${esc(p.idType)} · ${esc(p.idNumber)}</p>${p.identityId ? `<a href="api/media/${p.identityId}" target="_blank" rel="noopener"><img class="identity-preview" src="api/media/${p.identityId}" alt="私有身份证明材料"></a>` : ''}`;
           } else
             body = `<h3>${esc(r.title)}</h3><p>@${esc(r.author)} · ${r.votes} 票 · 评委平均 ${Number(r.judge_score).toFixed(1)}</p><p>${esc(r.description)}</p>${r.videoUrl ? `<video controls preload="none" playsinline src="${r.videoUrl}"></video>` : '<p>文字 / 现场实物展示成果</p>'}`;
           return `<article class="admin-record" data-id="${r.id}"><span class="status ${r.status}">${label[r.status]}</span>${body}${r.note ? `<p class="hint error">退回意见：${esc(r.note)}</p>` : ''}${review && r.status !== 'draft' ? '<label>审核备注 / 退回原因<textarea class="review-note" rows="2" maxlength="500"></textarea></label><div class="actions"><button class="button small mint" data-review="approved">审核通过</button><button class="button small danger" data-review="rejected">退回修改</button></div>' : ''}${mode === 'works' && grade && r.status === 'approved' ? `<div class="actions"><input class="score-box" type="number" min="0" max="100" step="0.1" aria-label="我的评分" value="${r.myScore ?? ''}"><button class="button small outline" data-score>保存我的评分</button></div>` : ''}</article>`;
@@ -275,24 +268,12 @@ $('adminRows').addEventListener(
     }
   })
 );
-$('checkinForm').addEventListener(
-  'submit',
-  guarded(async (e) => {
-    e.preventDefault();
-    const result = await api('/api/admin/checkin', 'POST', { code: $('checkinCode').value });
-    $('checkinResult').hidden = false;
-    $('checkinResult').textContent =
-      `${result.duplicate ? '已经签到，无需重复核销' : '签到成功'} · ${result.application.payload.teamName} · ${result.application.seat_count} 人`;
-    await refreshOverview();
-  })
-);
 $('settingsForm').addEventListener(
   'submit',
   guarded(async (e) => {
     e.preventDefault();
     const f = e.target;
     await api('/api/admin/settings', 'PUT', {
-      capacity: Number(f.elements.capacity.value),
       registrationOpen: f.elements.registrationOpen.checked,
       votingOpen: f.elements.votingOpen.checked
     });

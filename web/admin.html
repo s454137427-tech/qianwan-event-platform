@@ -3,11 +3,12 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>赛事工作台 · 前湾 MEGA</title>
+    <title>赛事工作台 · 前湾印象城MEGA</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="tech.css?v=20261006" />
     <link rel="stylesheet" href="future.css?v=20261006-v2" />
     <link rel="stylesheet" href="readability.css?v=20261006" />
+    <link rel="stylesheet" href="brand.css?v=20261009" />
     <script src="admin.js" defer></script>
   </head>
   <body>
@@ -16,14 +17,20 @@
     </div>
     <header class="site-header">
       <a class="brand" href="/"
-        ><span class="brand-mark">IN↗</span><span>前湾 MEGA<small>赛事工作台</small></span></a
+        ><img
+          class="brand-logo"
+          src="assets/qianwan-mega-logo.png"
+          width="780"
+          height="238"
+          alt="前湾印象城MEGA"
+        /><span aria-hidden="true">前湾印象城MEGA<small>赛事工作台</small></span></a
       ><a class="text-link" href="/">返回活动网站 →</a
       ><button class="button small outline" id="adminLogout" hidden>退出登录</button>
     </header>
     <section id="adminLogin" class="panel admin-login">
       <div class="eyebrow muted">EVENT OPERATIONS</div>
       <h1 class="page-title">登录赛事工作台</h1>
-      <p class="hint">审核报名、管理作品、评委打分与现场签到。</p>
+      <p class="hint">核验报名资料、管理影像作品与评委打分。</p>
       <form id="adminLoginForm">
         <label>工作人员账号<input name="username" autocomplete="username" required /></label
         ><label
@@ -48,15 +55,13 @@
       <div id="stats" class="stat-grid"></div>
       <div class="tabs" id="adminTabs">
         <button data-mode="applications" class="active">报名核验</button
-        ><button data-mode="works">作品管理</button><button data-mode="checkin">现场签到</button
-        ><button data-mode="settings">活动设置</button
+        ><button data-mode="works">作品管理</button><button data-mode="settings">活动设置</button
         ><button data-mode="storage">视频与存储</button><button data-mode="staff">工作人员</button
         ><button data-mode="audit">操作记录</button>
       </div>
       <section id="listPanel">
         <div class="admin-controls">
           <select id="adminCompetition" aria-label="赛事">
-            <option value="creator">IN 造极限 · 造物大赛</option>
             <option value="film">AI 不喊 CUT · 影像大赛</option></select
           ><select id="adminStatus" aria-label="状态">
             <option value="">全部状态</option>
@@ -67,7 +72,7 @@
           ><a
             id="exportButton"
             class="button small outline"
-            href="api/admin/export?competition=creator"
+            href="api/admin/export?competition=film"
             >导出报名名单 ↓</a
           >
         </div>
@@ -77,31 +82,11 @@
           ><button id="adminNext" class="button outline">下一页</button>
         </div>
       </section>
-      <section id="checkinPanel" class="panel" hidden>
-        <h2>核验参赛身份</h2>
-        <p class="hint">
-          扫描参与者的签到二维码可打开此页面；也可输入签到码。重复签到会显示已有记录。
-        </p>
-        <form id="checkinForm">
-          <label>签到码<input id="checkinCode" maxlength="100" autocomplete="off" required /></label
-          ><button class="button dark">确认签到 ✓</button>
-        </form>
-        <div id="checkinResult" class="checkin-result" hidden></div>
-      </section>
       <section id="settingsPanel" class="panel" hidden>
-        <h2>活动开放与名额</h2>
-        <p class="hint">
-          报名名额按造物赛实际成员数计算，审批时检查剩余名额。投票关闭后新投票会被拒绝。
-        </p>
+        <h2>活动开放设置</h2>
+        <p class="hint">控制影像大赛的报名、投稿与公众投票。关闭后，相应的新提交会被拒绝。</p>
         <form id="settingsForm">
-          <label
-            >造物赛录取总人数上限<input
-              name="capacity"
-              type="number"
-              min="1"
-              max="10000"
-              required /></label
-          ><label class="checkbox"
+          <label class="checkbox"
             ><input name="registrationOpen" type="checkbox" /><span>开放报名与投稿</span></label
           ><label class="checkbox"
             ><input name="votingOpen" type="checkbox" /><span>开放公众投票</span></label
@@ -126,7 +111,6 @@
               >角色<select name="role">
                 <option value="reviewer">审核员 · 核验与审核</option>
                 <option value="judge">评委 · 查看作品与打分</option>
-                <option value="checker">签到员 · 现场核销</option>
                 <option value="admin">管理员 · 全部权限</option>
               </select></label
             ><label

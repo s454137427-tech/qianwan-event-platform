@@ -108,8 +108,7 @@ before(async () => {
     databaseUrl: '',
     redisUrl: '',
     storage: 'local',
-    capacity: 300,
-    deadlines: { creator: '', film: '', vote: '' }
+    deadlines: { registration: '', film: '', vote: '' }
   };
   platform = await createPlatform(config);
   server = platform.app.listen(0, '127.0.0.1');
@@ -262,78 +261,150 @@ test('concurrent repeats create one vote, and invalid or out-of-range scores are
   const wall = await outsider.ok('/api/works?competition=film');
   assert.equal(wall.items[0].finalScore, 94);
 });
-test('seat approval cannot overbook, check-in is idempotent, and creator entries require check-in', async () => {
-  await admin.ok('/api/admin/settings', 'PUT', {
-    capacity: 3,
-    registrationOpen: true,
-    votingOpen: true
-  });
-  const a = await participant('CreatorTeamA'),
-    b = await participant('CreatorTeamB');
-  const form = (name) => ({
-    payload: {
-      realName: name,
-      phone: '13800000000',
-      teamName: name,
-      members: [name, `${name}队友`],
-      consent: true
-    },
-    submit: true
-  });
-  const aa = (await a.ok('/api/applications/creator', 'PUT', form('TeamA'))).application.id,
-    bb = (await b.ok('/api/applications/creator', 'PUT', form('TeamB'))).application.id;
-  const results = await Promise.all(
-    [aa, bb].map((id) =>
-      admin.request(`/api/admin/applications/${id}/review`, 'POST', { status: 'approved' })
-    )
-  );
-  assert.equal(results.filter((r) => r.status === 200).length, 1);
-  assert.equal(results.filter((r) => r.status === 400).length, 1);
-  const acceptedIndex = results.findIndex((r) => r.status === 200),
-    accepted = acceptedIndex ? b : a,
-    row = results[acceptedIndex].data.application;
-  const work = {
-    competition: 'creator',
-    title: '测试造物',
-    author: '测试队',
-    description: '实物作品',
-    submissionKey: 'creator-entry'
-  };
-  assert.equal((await accepted.request('/api/works', 'POST', work)).status, 400);
+test('cancelled competition rejects all old entry points and retained records stay inactive', async () => {
+  const guest = new Client();
   assert.equal(
-    (await admin.ok('/api/admin/checkin', 'POST', { code: row.checkin_code })).duplicate,
-    false
+    (await author.request('/api/applications/creator', 'PUT', { payload: {}, submit: false }))
+      .status,
+    400
   );
   assert.equal(
-    (await admin.ok('/api/admin/checkin', 'POST', { code: row.checkin_code })).duplicate,
-    true
+    (await author.request('/api/works', 'POST', { competition: 'creator' })).status,
+    400
   );
-  await accepted.ok('/api/works', 'POST', work);
-  assert.equal((await accepted.request(`/api/me/applications/${row.id}/qr`)).status, 200);
-  await admin.ok('/api/admin/settings', 'PUT', {
-    capacity: 300,
-    registrationOpen: true,
-    votingOpen: true
-  });
-});
-test('creator voting enforces three total votes across different works, including concurrent attempts', async () => {
-  const workIds = [];
-  for (let i = 0; i < 4; i++) {
-    const c = await participant(`VotingFixture${i}`),
-      id = (await c.ok('/api/session')).user.id,
-      now = Date.now(),
-      w = crypto.randomUUID();
+  for (const url of [
+    '/api/works?competition=creator',
+    '/api/admin/applications?competition=creator',
+    '/api/admin/works?competition=creator',
+    '/api/admin/export?competition=creator',
+    '/api/admin/export/works?competition=creator'
+  ])
+    assert.equal((await admin.request(url)).status, 400);
+  assert.equal((await admin.request('/api/admin/checkin', 'POST', { code: 'old' })).status, 404);
+  const oldAuthor = await participant('RetainedHistory');
+  const userId = (await oldAuthor.ok('/api/session')).user.id;
+  const applicationId = crypto.randomUUID(),
+    approvedId = crypto.randomUUID(),
+    rejectedId = crypto.randomUUID(),
+    now = Date.now();
+  await platform.db.query(
+    'INSERT INTO applications(id,user_id,competition,payload,status,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7)',
+    [applicationId, userId, 'creator', '{}', 'pending', now, now]
+  );
+  const oldVideo = await upload(oldAuthor, 'video');
+  for (const [id, status] of [
+    [approvedId, 'approved'],
+    [rejectedId, 'rejected']
+  ])
     await platform.db.query(
-      'INSERT INTO works(id,user_id,competition,title,author,description,status,created_at,updated_at,submission_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
-      [w, id, 'creator', `造物${i}`, '测试队', '', 'approved', now, now, `fixture-${i}`]
+      'INSERT INTO works(id,user_id,competition,title,author,description,video_id,status,created_at,updated_at,submission_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
+      [
+        id,
+        userId,
+        'creator',
+        '历史作品',
+        '历史作者',
+        '',
+        id === approvedId ? oldVideo : null,
+        status,
+        now,
+        now,
+        id
+      ]
     );
-    workIds.push(w);
-  }
-  const c = await participant('CreatorVoter'),
-    responses = await Promise.all(workIds.map((id) => c.request(`/api/votes/${id}`, 'POST')));
-  assert.equal(responses.filter((r) => r.status === 200).length, 3);
-  assert.equal(responses.filter((r) => r.status === 400).length, 1);
+  assert.equal(
+    (
+      await admin.request('/api/admin/applications/' + applicationId + '/review', 'POST', {
+        status: 'approved'
+      })
+    ).status,
+    400
+  );
+  assert.equal(
+    (await oldAuthor.request('/api/me/applications/' + applicationId + '/qr')).status,
+    404
+  );
+  assert.equal(
+    (
+      await admin.request('/api/admin/works/' + approvedId + '/review', 'POST', {
+        status: 'rejected',
+        note: 'test'
+      })
+    ).status,
+    400
+  );
+  assert.equal(
+    (await admin.request('/api/admin/works/' + approvedId + '/score', 'POST', { score: 90 }))
+      .status,
+    400
+  );
+  assert.equal(
+    (await oldAuthor.request('/api/works/' + rejectedId, 'PUT', { title: 'test', author: 'test' }))
+      .status,
+    400
+  );
+  assert.equal(
+    (
+      await oldAuthor.request('/api/works', 'POST', {
+        competition: 'film',
+        title: 'test',
+        author: 'test',
+        submissionKey: approvedId
+      })
+    ).status,
+    400
+  );
+  assert.equal((await author.request('/api/votes/' + approvedId, 'POST')).status, 400);
+  assert.equal((await guest.request('/api/media/' + oldVideo)).status, 403);
+  const me = await oldAuthor.ok('/api/me');
+  assert.deepEqual(me.applications, []);
+  assert.deepEqual(me.works, []);
+  assert.deepEqual(me.votes, []);
+  const overview = await admin.ok('/api/admin/overview');
+  for (const row of [...overview.applications, ...overview.works])
+    assert.equal(row.competition, 'film');
+  assert.ok(!(await guest.ok('/api/works')).items.some((row) => row.id === approvedId));
+  assert.ok(
+    !(await admin.ok('/api/admin/applications')).items.some((row) => row.id === applicationId)
+  );
+  assert.ok(!(await admin.ok('/api/admin/works')).items.some((row) => row.id === approvedId));
+  assert.ok(!(await admin.ok('/api/admin/export')).includes(applicationId));
+  assert.ok(!(await admin.ok('/api/admin/export/works')).includes(approvedId));
+  assert.equal(
+    (await platform.db.query('SELECT id FROM applications WHERE id=$1', [applicationId])).rows
+      .length,
+    1
+  );
+  assert.equal(
+    (await platform.db.query('SELECT status FROM works WHERE id=$1', [approvedId])).rows[0].status,
+    'approved'
+  );
+  assert.equal(
+    (await platform.db.query('SELECT COUNT(*) AS n FROM votes WHERE work_id=$1', [approvedId]))
+      .rows[0].n,
+    0
+  );
 });
+
+test('public configuration exposes only film and registration deadline closes applications', async () => {
+  const guest = new Client(),
+    config = await guest.ok('/api/config');
+  assert.equal(config.siteName, '前湾印象城MEGA');
+  assert.deepEqual(config.competitions, ['film']);
+  assert.deepEqual(Object.keys(config.rules), ['film']);
+  const deadline = platform.config.deadlines.registration;
+  platform.config.deadlines.registration = '2020-01-01T00:00:00+08:00';
+  try {
+    const response = await (
+      await participant('ClosedRegistration')
+    ).request('/api/applications/film', 'PUT', { payload: {}, submit: false });
+    assert.equal(response.status, 400);
+    assert.match(response.data.error, /截止/);
+  } finally {
+    platform.config.deadlines.registration = deadline;
+  }
+});
+
 test('reviewer and judge roles cannot cross permissions or access private identity material', async () => {
   for (const role of ['judge', 'reviewer'])
     await admin.ok('/api/admin/staff', 'POST', {
@@ -370,7 +441,6 @@ test('reviewer and judge roles cannot cross permissions or access private identi
 });
 test('closing voting prevents new votes and rejects files with deceptive extensions', async () => {
   await admin.ok('/api/admin/settings', 'PUT', {
-    capacity: 300,
     registrationOpen: true,
     votingOpen: false
   });

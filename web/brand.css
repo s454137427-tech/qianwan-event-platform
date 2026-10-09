@@ -1,0 +1,31 @@
+.brand-logo {
+  display: block;
+  width: 156px;
+  height: auto;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+.brand {
+  gap: 16px;
+}
+.brand > span {
+  font-size: 15px;
+  white-space: nowrap;
+}
+.event-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+.event-grid .film-card {
+  max-width: none;
+}
+@media (max-width: 760px) {
+  .brand {
+    gap: 0;
+  }
+  .brand-logo {
+    width: 154px;
+  }
+  .brand > span {
+    display: none;
+  }
+}
