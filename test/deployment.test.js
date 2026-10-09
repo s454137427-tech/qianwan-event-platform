@@ -65,6 +65,62 @@ test('release allowlist excludes credentials, operational data and review copies
     assert.ok(files.includes(name));
 });
 
+test('the rebuilt browser COS SDK initializes multipart upload and escapes completion XML', async () => {
+  const vm = require('node:vm');
+  const { browserSdk } = require('../lib/browser-sdk');
+  const source = await browserSdk();
+  const bodies = [];
+  class XHR {
+    upload = {};
+    open(method, url) {
+      this.url = url;
+    }
+    setRequestHeader() {}
+    getAllResponseHeaders() {
+      return 'content-type: application/xml';
+    }
+    send(body) {
+      bodies.push(body);
+      this.status = 200;
+      this.response = this.url.includes('uploadId=')
+        ? '<CompleteMultipartUploadResult><ETag>"completed"</ETag><Key>fixture.mp4</Key></CompleteMultipartUploadResult>'
+        : '<InitiateMultipartUploadResult><Bucket>fixture-1234567890</Bucket><Key>fixture.mp4</Key><UploadId>fixture-upload</UploadId></InitiateMultipartUploadResult>';
+      queueMicrotask(() => this.onload());
+    }
+  }
+  const context = vm.createContext({
+    window: {},
+    navigator: { userAgent: 'Desktop Browser' },
+    location: { protocol: 'https:' },
+    XMLHttpRequest: XHR,
+    btoa,
+    atob,
+    setTimeout,
+    clearTimeout,
+    setInterval,
+    clearInterval,
+    console
+  });
+  vm.runInContext(source, context);
+  const cos = new context.COS({ SecretId: 'fixture-id', SecretKey: 'fixture-key', Timeout: 2000 });
+  const call = (method, options) =>
+    new Promise((resolve, reject) =>
+      cos[method](
+        { Bucket: 'fixture-1234567890', Region: 'ap-shanghai', Key: 'fixture.mp4', ...options },
+        (error, result) => (error ? reject(error) : resolve(result))
+      )
+    );
+  const init = await call('multipartInit', {});
+  assert.equal(init.UploadId, 'fixture-upload');
+  const complete = await call('multipartComplete', {
+    UploadId: init.UploadId,
+    Parts: [{ PartNumber: 1, ETag: '"part&fixture"' }]
+  });
+  assert.equal(complete.ETag, '"completed"');
+  assert.match(bodies[1], /&amp;/);
+  assert.ok(!bodies[1].includes('part&fixture'));
+});
+
 test('login dialog offers one QR flow for both desktop and WeChat, and ignores closed requests', async () => {
   const vm = require('node:vm');
   const html = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
@@ -166,5 +222,90 @@ test('login dialog offers one QR flow for both desktop and WeChat, and ignores c
     assert.equal(elements.get('loginQrImage').hidden, true);
     assert.equal(timers.size, 0);
     assert.ok(calls.every((url) => url === '/api/auth/qr'));
+  }
+});
+
+test('QR login recovers a lost completion response only after verifying the consumed browser ticket', async () => {
+  const vm = require('node:vm');
+  const html = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
+  const source = fs.readFileSync(path.join(root, 'web/wechat-login-ui.js'), 'utf8');
+  for (const authenticated of [true, false]) {
+    const elements = new Map(
+      [...html.matchAll(/id="([^"]+)"/g)].map((m) => [
+        m[1],
+        {
+          hidden: true,
+          open: false,
+          textContent: '',
+          listeners: {},
+          addEventListener(name, callback) {
+            this.listeners[name] = callback;
+          },
+          showModal() {
+            this.open = true;
+          },
+          close() {
+            this.open = false;
+            this.listeners.close?.();
+          }
+        }
+      ])
+    );
+    const timers = new Map(),
+      calls = [],
+      successes = [];
+    let polls = 0;
+    const context = vm.createContext({
+      document: { hidden: false, getElementById: (id) => elements.get(id) },
+      navigator: { userAgent: 'Desktop Browser' },
+      window: {},
+      AbortSignal,
+      Date,
+      setTimeout: (fn, ms) => {
+        timers.set(fn, ms);
+        return fn;
+      },
+      setInterval: (fn, ms) => {
+        timers.set(fn, ms);
+        return fn;
+      },
+      clearTimeout: (fn) => timers.delete(fn),
+      clearInterval: (fn) => timers.delete(fn),
+      fetch: async (url) => {
+        calls.push(url);
+        if (url.endsWith('/complete')) throw new TypeError('Lost response fixture');
+        const data =
+          url === '/api/auth/qr'
+            ? {
+                id: 'fixture',
+                qrImage: 'data:image/png;base64,test',
+                displayCode: '123456',
+                expiresAt: Date.now() + 300000
+              }
+            : url === '/api/session'
+              ? { user: { id: 'wechat-user' }, csrf: 'fixture' }
+              : ++polls === 1
+                ? { status: 'approved' }
+                : { status: 'consumed', authenticated };
+        return { ok: true, json: async () => data };
+      }
+    });
+    vm.runInContext(source, context);
+    context.window.eventWechatLogin.open({
+      config: { wechat: true },
+      returnTo: 'wall',
+      onSuccess: (data) => successes.push(data)
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    const scheduled = [...timers].find(([, ms]) => ms === 2000)[0];
+    timers.delete(scheduled);
+    await scheduled();
+    assert.equal(successes.length, authenticated ? 1 : 0);
+    assert.equal(calls.includes('/api/session'), authenticated);
+    if (authenticated) {
+      assert.equal(successes[0].destination, 'wall');
+      assert.equal(elements.get('loginDialog').open, false);
+      assert.equal(timers.size, 0);
+    } else elements.get('loginDialog').close();
   }
 });

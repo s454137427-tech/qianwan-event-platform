@@ -17,7 +17,7 @@
       body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(12000)
     });
-    const data = await response.json().catch(() => ({}));
+    const data = await response.json();
     if (!response.ok)
       throw Object.assign(new Error(data.error || '连接失败，请稍后重试'), {
         status: response.status
@@ -62,9 +62,22 @@
     try {
       const data = await api('/api/auth/qr/' + ticket.id);
       if (generation !== epoch) return;
-      if (data.status === 'approved') {
+      if (data.status === 'approved' || (data.status === 'consumed' && data.authenticated)) {
         message('手机已确认，正在登录…');
-        const result = await api('/api/auth/qr/' + ticket.id + '/complete', 'POST', {});
+        let result;
+        try {
+          result =
+            data.status === 'consumed'
+              ? { ...(await api('/api/session')), destination }
+              : await api('/api/auth/qr/' + ticket.id + '/complete', 'POST', {});
+        } catch (error) {
+          // A response body may be lost after the browser has saved the session cookie.
+          const recovered = await api('/api/auth/qr/' + ticket.id);
+          if (recovered.status !== 'consumed' || !recovered.authenticated) throw error;
+          result = await api('/api/session');
+          if (!result.user) throw error;
+          result.destination = destination;
+        }
         if (generation !== epoch) return;
         byId('loginDialog').close();
         stop();
@@ -120,6 +133,7 @@
       byId('loginQrCode').textContent = data.displayCode;
       message('请使用手机微信扫一扫。');
       clock(epoch);
+      if (generation !== epoch) return;
       clockTimer = setInterval(() => clock(epoch), 1000);
       pollTimer = setTimeout(() => poll(epoch), 2000);
     } catch (error) {
@@ -132,6 +146,7 @@
   byId('loginDialog').addEventListener('close', stop);
   window.eventWechatLogin = {
     open(options) {
+      if (byId('loginDialog').open) return;
       config = options.config;
       onSuccess = options.onSuccess;
       destination = options.returnTo || 'account';

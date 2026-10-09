@@ -23,7 +23,7 @@
       body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(12000)
     });
-    const result = await response.json().catch(() => ({}));
+    const result = await response.json();
     if (!response.ok) throw new Error(result.error || '连接失败，请稍后重试');
     return result;
   };
@@ -53,7 +53,25 @@
       showError('二维码已过期，请在原网页刷新后重新扫描。');
     }
   }
+  function finished(decision) {
+    forget();
+    ready = false;
+    clearInterval(expiryTimer);
+    $('scanActions').hidden = true;
+    $('scanAuthorize').hidden = true;
+    $('scanRetry').hidden = true;
+    $('scanExpiry').textContent = '';
+    $('scanTitle').textContent = decision === 'approve' ? '已确认登录' : '已取消登录';
+    $('scanStatus').textContent =
+      decision === 'approve'
+        ? '原网页将自动完成登录。你可以回到原网页继续报名或投稿。'
+        : '原网页不会登录这个微信账号。';
+  }
   async function load() {
+    ready = false;
+    clearInterval(expiryTimer);
+    $('scanActions').hidden = true;
+    $('scanAuthorize').hidden = true;
     if (error) {
       forget();
       return showError(
@@ -75,6 +93,8 @@
       if (!/MicroMessenger/i.test(navigator.userAgent))
         return showError('请使用手机微信“扫一扫”打开此页面。');
       const result = await api('/api/auth/qr/scan', { ticket });
+      if (['approved', 'consumed', 'rejected'].includes(result.status))
+        return finished(result.status === 'rejected' ? 'reject' : 'approve');
       const session = await api('/api/session');
       csrf = session.csrf;
       $('scanOrigin').textContent = result.origin;
@@ -117,20 +137,12 @@
   });
   async function decide(decision) {
     if (!ready) return;
+    ready = false;
     $('scanApprove').disabled = true;
     $('scanReject').disabled = true;
     try {
       await api('/api/auth/qr/decision', { ticket, decision });
-      forget();
-      ready = false;
-      clearInterval(expiryTimer);
-      $('scanActions').hidden = true;
-      $('scanExpiry').textContent = '';
-      $('scanTitle').textContent = decision === 'approve' ? '已确认登录' : '已取消登录';
-      $('scanStatus').textContent =
-        decision === 'approve'
-          ? '原网页将自动完成登录。你可以回到原网页继续报名或投稿。'
-          : '原网页不会登录这个微信账号。';
+      finished(decision);
     } catch (e) {
       showError(e.message);
     } finally {

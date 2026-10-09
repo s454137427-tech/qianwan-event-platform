@@ -3,6 +3,9 @@ const createPlatform = (...args) => require('./lib/platform').createPlatform(...
 async function start() {
   const platform = await createPlatform();
   const server = platform.app.listen(platform.config.port, platform.config.host);
+  server.headersTimeout = 15000;
+  server.requestTimeout = 90000;
+  server.keepAliveTimeout = 5000;
   try {
     await new Promise((resolve, reject) => {
       server.once('listening', resolve);

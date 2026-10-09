@@ -600,6 +600,12 @@ test('WeChat OAuth and QR login bind the browser, require confirmation, expire a
     assert.equal((await browser.ok(`/api/auth/qr/${qr.id}`)).status, 'scanned');
     assert.equal((await browser.request(`/api/auth/qr/${qr.id}/complete`, 'POST')).status, 409);
     await phone.ok('/api/auth/qr/decision', 'POST', { ticket, decision: 'approve' });
+    await phone.ok('/api/auth/qr/decision', 'POST', { ticket, decision: 'approve' });
+    assert.equal((await phone.ok('/api/auth/qr/scan', 'POST', { ticket })).status, 'approved');
+    assert.equal(
+      (await phone.request('/api/auth/qr/decision', 'POST', { ticket, decision: 'reject' })).status,
+      409
+    );
     const complete = await Promise.all([
       browser.request(`/api/auth/qr/${qr.id}/complete`, 'POST'),
       browser.request(`/api/auth/qr/${qr.id}/complete`, 'POST')
@@ -607,8 +613,12 @@ test('WeChat OAuth and QR login bind the browser, require confirmation, expire a
     assert.equal(complete.filter((r) => r.status === 200).length, 1);
     assert.equal(complete.find((r) => r.status === 200).data.destination, 'wall');
     assert.equal((await browser.ok('/api/session')).user.id, user.id);
+    assert.equal((await browser.ok(`/api/auth/qr/${qr.id}`)).authenticated, true);
+    assert.equal((await phone.ok('/api/auth/qr/scan', 'POST', { ticket })).status, 'consumed');
+    await phone.ok('/api/auth/qr/decision', 'POST', { ticket, decision: 'approve' });
     const renewed = await browser.ok('/api/auth/qr', 'POST', {});
     await phone.ok('/api/auth/qr/scan', 'POST', { ticket });
+    await phone.ok('/api/auth/qr/decision', 'POST', { ticket, decision: 'reject' });
     await phone.ok('/api/auth/qr/decision', 'POST', { ticket, decision: 'reject' });
     assert.equal((await browser.ok(`/api/auth/qr/${renewed.id}`)).status, 'rejected');
     assert.equal(
@@ -630,6 +640,183 @@ test('WeChat OAuth and QR login bind the browser, require confirmation, expire a
     platform.config.wechatAppId = old.appid;
     platform.config.wechatSecret = old.secret;
   }
+});
+
+test('invalid request bodies are client errors and do not echo submitted data', async () => {
+  assert.equal((await author.request('/api/uploads', 'POST')).status, 400);
+  assert.equal((await author.request('/api/uploads', 'POST', [])).status, 400);
+  for (const [body, status] of [
+    ['{"private-test-data":', 400],
+    [JSON.stringify({ value: 'private-test-data'.repeat(5000) }), 413]
+  ]) {
+    const response = await fetch(origin + '/api/uploads', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body
+    });
+    assert.equal(response.status, status);
+    const data = await response.json();
+    assert.ok(!data.error.includes('private-test-data'));
+    assert.ok(data.requestId);
+  }
+});
+
+test('draft revisions prevent stale concurrent saves from overwriting the latest data', async () => {
+  const client = await participant('DraftRevisionFixture');
+  const initial = await client.ok('/api/applications/film', 'PUT', {
+    payload: { realName: '初始草稿' },
+    submit: false,
+    revision: null
+  });
+  const results = await Promise.all(
+    ['第一份修改', '第二份修改'].map((realName) =>
+      client.request('/api/applications/film', 'PUT', {
+        payload: { realName },
+        submit: false,
+        revision: Number(initial.application.updated_at)
+      })
+    )
+  );
+  assert.equal(results.filter((r) => r.status === 200).length, 1);
+  assert.equal(results.filter((r) => r.status === 409).length, 1);
+  const saved = results.find((r) => r.status === 200).data.application;
+  assert.ok(Number(saved.updated_at) > Number(initial.application.updated_at));
+  assert.equal(
+    (await client.ok('/api/me')).applications[0].payload.realName,
+    saved.payload.realName
+  );
+  const stale = await client.request('/api/applications/film', 'PUT', {
+    payload: { realName: '过期内容' },
+    submit: false,
+    revision: Number(initial.application.updated_at)
+  });
+  assert.equal(stale.status, 409);
+  const current = await client.ok('/api/applications/film', 'PUT', {
+    payload: { realName: '最终内容' },
+    submit: false,
+    revision: Number(saved.updated_at)
+  });
+  assert.equal(current.application.payload.realName, '最终内容');
+});
+
+test('closing a phase while a write waits prevents the queued write from committing', async (t) => {
+  const client = await participant('QueuedPhaseFixture');
+  for (const [url, method, body, gate] of [
+    ['/api/applications/film', 'PUT', { payload: {}, submit: false }, 'registrationOpen'],
+    [
+      '/api/works',
+      'POST',
+      { competition: 'film', title: '排队作品', author: '测试', submissionKey: 'queued-phase' },
+      'registrationOpen'
+    ],
+    [`/api/votes/${filmWork}`, 'POST', {}, 'votingOpen']
+  ]) {
+    await platform.db.query('UPDATE settings SET value=$1 WHERE key=$2', ['true', gate]);
+    const original = platform.db.transaction;
+    let release, entered;
+    const held = new Promise((resolve) => {
+      release = resolve;
+    });
+    const started = new Promise((resolve) => {
+      entered = resolve;
+    });
+    const mock = t.mock.method(platform.db, 'transaction', async (fn) => {
+      entered();
+      await held;
+      return original(fn);
+    });
+    try {
+      const response = client.request(url, method, body);
+      await started;
+      await platform.db.query('UPDATE settings SET value=$1 WHERE key=$2', ['false', gate]);
+      release();
+      assert.equal((await response).status, 400);
+    } finally {
+      release();
+      mock.mock.restore();
+      await platform.db.query('UPDATE settings SET value=$1 WHERE key=$2', ['true', gate]);
+    }
+  }
+});
+
+test('concurrent staff creation produces one account and one audit event', async () => {
+  const body = {
+    username: 'concurrent_staff',
+    nickname: '并发测试',
+    role: 'reviewer',
+    password: 'concurrent-password-test-2026'
+  };
+  const results = await Promise.all([
+    admin.request('/api/admin/staff', 'POST', body),
+    admin.request('/api/admin/staff', 'POST', body)
+  ]);
+  assert.equal(results.filter((r) => r.status === 200).length, 1);
+  assert.ok(results.some((r) => [400, 409].includes(r.status)));
+  const users = (
+    await platform.db.query('SELECT id FROM users WHERE identity_key=$1', [
+      'staff:concurrent_staff'
+    ])
+  ).rows;
+  assert.equal(users.length, 1);
+  assert.equal(
+    (
+      await platform.db.query('SELECT id FROM audit WHERE action=$1 AND target_id=$2', [
+        'staff.create',
+        users[0].id
+      ])
+    ).rows.length,
+    1
+  );
+});
+
+test('concurrent qualification rejection and work publication preserve eligibility', async () => {
+  const client = await participant('ConcurrentReviewFixture');
+  const user = (await client.ok('/api/session')).user;
+  const aid = crypto.randomUUID(),
+    wid = crypto.randomUUID(),
+    now = Date.now();
+  await platform.db.query(
+    'INSERT INTO applications(id,user_id,competition,payload,status,created_at,updated_at) VALUES($1,$2,$3,$4,$5,$6,$7)',
+    [aid, user.id, 'film', '{}', 'approved', now, now]
+  );
+  await platform.db.query(
+    'INSERT INTO works(id,user_id,competition,title,author,description,status,created_at,updated_at,submission_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+    [wid, user.id, 'film', '并发审核测试', '测试', '', 'pending', now, now, wid]
+  );
+  const results = await Promise.all([
+    admin.request(`/api/admin/applications/${aid}/review`, 'POST', {
+      status: 'rejected',
+      note: '资料需核验'
+    }),
+    admin.request(`/api/admin/works/${wid}/review`, 'POST', { status: 'approved' })
+  ]);
+  assert.equal(results.filter((r) => r.status === 200).length, 1);
+  assert.equal(results.filter((r) => r.status === 400).length, 1);
+  const application = (
+    await platform.db.query('SELECT status FROM applications WHERE id=$1', [aid])
+  ).rows[0];
+  const work = (await platform.db.query('SELECT status FROM works WHERE id=$1', [wid])).rows[0];
+  assert.ok(work.status !== 'approved' || application.status === 'approved');
+});
+
+test('repeated shutdown shares cleanup and preserves resource failures', async (t) => {
+  // A separate fixture leaves the active integration-test platform untouched.
+  const fixture = path.join(directory, 'shutdown-fixture');
+  const isolated = await createPlatform({ ...platform.config, dataDir: fixture });
+  let databaseCloses = 0;
+  const originalClose = isolated.db.close;
+  t.mock.method(isolated.db, 'close', async () => {
+    databaseCloses++;
+    await originalClose();
+    throw new Error('shutdown failure fixture');
+  });
+  const first = isolated.close();
+  const second = isolated.close();
+  assert.equal(first, second);
+  const results = await Promise.allSettled([first, second]);
+  assert.ok(results.every((r) => r.status === 'rejected' && r.reason instanceof AggregateError));
+  assert.equal(results[0].reason.errors[0].message, 'shutdown failure fixture');
+  assert.equal(databaseCloses, 1);
 });
 
 test('domain verification serves only expected text files and health endpoints stay available', async () => {

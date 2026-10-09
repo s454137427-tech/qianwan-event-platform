@@ -21,7 +21,10 @@ const state = {
   paused: false,
   uploadCancel: null
 };
-let toastTimer, saveTimer;
+let toastTimer,
+  saveTimer,
+  meGeneration = 0;
+let applicationQueue = Promise.resolve();
 function toast(message) {
   $('toast').textContent = message;
   $('toast').hidden = false;
@@ -39,14 +42,28 @@ async function api(url, { method = 'GET', body, signal } = {}) {
     headers['Content-Type'] = 'application/json';
     body = JSON.stringify(body);
   }
-  const response = await fetch(url, { method, headers, body, signal });
-  const data = await response.json().catch(() => ({ error: '服务响应异常，请重试' }));
+  const timeout = AbortSignal.timeout(url.includes('/uploads/') ? 60000 : 30000);
+  const response = await fetch(url, {
+    method,
+    headers,
+    body,
+    signal: signal ? AbortSignal.any([signal, timeout]) : timeout
+  });
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error('连接未完成，请保留填写内容后重试');
+  }
   if (!response.ok) {
     const e = new Error(data.error || '操作失败');
     e.status = response.status;
     if (response.status === 401) {
       state.user = null;
       state.csrf = null;
+      state.me = null;
+      meGeneration++;
+      clearTimeout(saveTimer);
       updateLogin();
     }
     throw e;
@@ -111,7 +128,10 @@ function payload() {
   };
 }
 async function refreshMe() {
-  state.me = state.user ? await api('/api/me') : null;
+  const epoch = ++meGeneration,
+    userId = state.user?.id;
+  const data = userId ? await api('/api/me') : null;
+  if (epoch === meGeneration && userId === state.user?.id) state.me = data;
 }
 function populateApplication() {
   const form = $('applicationForm'),
@@ -162,7 +182,17 @@ function switchEvent(type) {
   hint('workHint', '');
   populateApplication();
 }
-async function saveApplication(submit, automatic = false, captured) {
+function saveApplication(submit, automatic = false, captured) {
+  const snapshot = captured || { event: state.event, payload: payload() };
+  const userId = state.user?.id;
+  const operation = applicationQueue.then(() => {
+    if (userId !== state.user?.id) throw new Error('登录账号已变化，请核对资料后重试');
+    return persistApplication(submit, automatic, snapshot);
+  });
+  applicationQueue = operation.catch(() => {});
+  return operation;
+}
+async function persistApplication(submit, automatic, captured) {
   if (!state.user) {
     if (!automatic) showLogin();
     return;
@@ -173,8 +203,22 @@ async function saveApplication(submit, automatic = false, captured) {
     p.identityId = await uploadFile($('identityFile').files[0], 'identity');
   const data = await api(`/api/applications/${event}`, {
     method: 'PUT',
-    body: { payload: p, submit }
+    body: {
+      payload: p,
+      submit,
+      revision:
+        state.me?.applications.find((a) => a.competition === event)?.updated_at == null
+          ? null
+          : Number(state.me.applications.find((a) => a.competition === event).updated_at)
+    }
   });
+  // Update the saved version immediately, even when the follow-up refresh fails.
+  if (state.me) {
+    state.me.applications = [
+      data.application,
+      ...state.me.applications.filter((a) => a.competition !== event)
+    ];
+  }
   await refreshMe();
   if (state.event === event) {
     $('applicationState').textContent =
@@ -223,6 +267,8 @@ async function uploadFile(file, kind) {
     }
   });
   if (task.status === 'ready') {
+    state.uploadCancel = null;
+    $('pauseUpload').disabled = true;
     progress(100, '已恢复上传完成的文件');
     return task.id;
   }
@@ -264,6 +310,7 @@ async function uploadFile(file, kind) {
     await new Promise((resolve, reject) => {
       let taskId;
       const cos = new COS({
+        Timeout: 60000,
         getAuthorization(options, callback) {
           api(`/api/uploads/${task.id}/credentials`, { method: 'POST' })
             .then((data) =>
@@ -275,7 +322,10 @@ async function uploadFile(file, kind) {
                 ExpiredTime: data.expiredTime
               })
             )
-            .catch(reject);
+            .catch((error) => {
+              if (taskId) cos.cancelTask(taskId);
+              reject(error);
+            });
         }
       });
       state.uploadCancel = () => {
@@ -314,6 +364,7 @@ async function uploadFile(file, kind) {
     });
   }
   state.uploadCancel = null;
+  if (state.paused) throw new Error('上传已暂停，保留原文件后可继续。');
   $('pauseUpload').disabled = true;
   progress(97, '正在核对文件完整性…');
   await api(`/api/uploads/${task.id}/complete`, { method: 'POST' });
@@ -396,15 +447,21 @@ $('loginButton').addEventListener('click', async () => {
   try {
     if (state.busy) return toast('请先完成或暂停当前上传。');
     if (!state.user) return showLogin();
+    clearTimeout(saveTimer);
+    state.busy = true;
+    await applicationQueue;
     await api('/api/auth/logout', { method: 'POST' });
     state.user = null;
     state.csrf = null;
     state.me = null;
+    state.busy = false;
     updateLogin();
     switchEvent(state.event);
     await route();
   } catch (e) {
     handleError(e);
+  } finally {
+    state.busy = false;
   }
 });
 document
@@ -425,10 +482,15 @@ $('applicationForm').addEventListener('input', () => {
 $('saveDraft').addEventListener('click', async () => {
   if (state.busy) return;
   clearTimeout(saveTimer);
+  $('saveDraft').disabled = true;
   try {
     await saveApplication(false);
   } catch (e) {
     hint('saveHint', e.message, true);
+  } finally {
+    $('saveDraft').disabled = ['pending', 'approved'].includes(
+      state.me?.applications.find((a) => a.competition === state.event)?.status
+    );
   }
 });
 $('applicationForm').addEventListener('submit', async (e) => {

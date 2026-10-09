@@ -8,7 +8,8 @@ const $ = (id) => document.getElementById(id),
 const label = { draft: '草稿', pending: '待审核', approved: '已通过', rejected: '退回修改' },
   roles = { admin: '管理员', reviewer: '审核员', judge: '评委' };
 const state = { user: null, csrf: null, mode: 'applications', page: 1, overview: null };
-let toastTimer;
+let toastTimer,
+  listGeneration = 0;
 function toast(message) {
   $('toast').textContent = message;
   $('toast').hidden = false;
@@ -22,9 +23,15 @@ async function api(url, method = 'GET', body) {
   const response = await fetch(url, {
     method,
     headers,
-    body: body ? JSON.stringify(body) : undefined
+    body: body ? JSON.stringify(body) : undefined,
+    signal: AbortSignal.timeout(30000)
   });
-  const data = await response.json().catch(() => ({ error: '服务响应异常' }));
+  let data;
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error('连接未完成，请刷新核对保存结果后重试');
+  }
   if (!response.ok) {
     if (response.status === 401) showLogin();
     throw new Error(data.error || '操作失败');
@@ -32,6 +39,9 @@ async function api(url, method = 'GET', body) {
   return data;
 }
 function showLogin() {
+  state.user = null;
+  state.csrf = null;
+  listGeneration++;
   $('adminApp').hidden = true;
   $('adminLogin').hidden = false;
   $('adminLogout').hidden = true;
@@ -105,10 +115,11 @@ async function render() {
 async function loadList() {
   const mode = state.mode,
     type = $('adminCompetition').value,
-    status = $('adminStatus').value;
-  const data = await api(
-    `/api/admin/${mode}?competition=${type}&status=${status}&page=${state.page}`
-  );
+    status = $('adminStatus').value,
+    page = state.page,
+    epoch = ++listGeneration;
+  const data = await api(`/api/admin/${mode}?competition=${type}&status=${status}&page=${page}`);
+  if (epoch !== listGeneration || mode !== state.mode || !state.user) return;
   $('exportButton').hidden = !['admin', 'reviewer'].includes(state.user.role);
   $('exportButton').href =
     mode === 'works'

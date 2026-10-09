@@ -1,0 +1,2 @@
+overrides:
+  cos-js-sdk-v5>fast-xml-parser: 5.11.2
