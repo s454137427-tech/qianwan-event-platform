@@ -1,17 +1,27 @@
 {
-  "name": "qianwan-event-platform-demo",
+  "name": "qianwan-event-platform",
   "version": "2.2.3",
   "private": true,
   "type": "commonjs",
+  "packageManager": "pnpm@11.25.0",
   "engines": {
-    "node": ">=22.5"
+    "node": ">=24"
   },
   "scripts": {
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "5.2.1",
-    "multer": "2.4.0",
-    "qrcode": "1.5.4"
+    "@volcengine/sts": "1.0.5",
+    "@volcengine/tos-sdk": "2.9.1",
+    "axios": "0.34.0",
+    "esbuild": "0.28.2",
+    "express": "^5.2.1",
+    "multer": "^2.4.0",
+    "pg": "^8.16.3",
+    "qrcode": "^1.5.4",
+    "redis": "^5.8.2"
+  },
+  "devDependencies": {
+    "prettier": "3.6.2"
   }
 }
