@@ -134,191 +134,150 @@ test('production TOS preflight accepts only the supported private-domain configu
   }
 });
 
-test('login dialog offers one QR flow for both desktop and WeChat, and ignores closed requests', async () => {
+// 手机号+密码登录界面的行为测试：元素必须存在于页面，校验在前端先拦一道。
+function accountLoginElements(html) {
+  return new Map(
+    [...html.matchAll(/id="([^"]+)"/g)].map((m) => [
+      m[1],
+      {
+        hidden: true,
+        open: false,
+        disabled: false,
+        textContent: '',
+        value: '',
+        attributes: {},
+        listeners: {},
+        classList: {
+          toggled: [],
+          toggle(name, on) {
+            this.toggled.push([name, on]);
+          }
+        },
+        addEventListener(name, callback) {
+          this.listeners[name] = callback;
+        },
+        setAttribute(name, value) {
+          this.attributes[name] = value;
+        },
+        getAttribute(name) {
+          return this.attributes[name];
+        },
+        showModal() {
+          this.open = true;
+        },
+        close() {
+          this.open = false;
+          this.listeners.close?.();
+        },
+        focus() {}
+      }
+    ])
+  );
+}
+
+function runAccountLogin(responses) {
   const vm = require('node:vm');
   const html = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
-  const source = fs.readFileSync(path.join(root, 'web/wechat-login-ui.js'), 'utf8');
-  const flush = () => new Promise((resolve) => setImmediate(resolve));
-  for (const userAgent of ['Desktop Browser', 'iPhone MicroMessenger']) {
-    const elements = new Map(
-      [...html.matchAll(/id="([^"]+)"/g)].map((m) => [
-        m[1],
-        {
-          hidden: true,
-          open: false,
-          textContent: '',
-          listeners: {},
-          addEventListener(name, callback) {
-            this.listeners[name] = callback;
-          },
-          showModal() {
-            this.open = true;
-          },
-          close() {
-            this.open = false;
-            this.listeners.close?.();
-          }
-        }
-      ])
-    );
-    const calls = [],
-      timers = new Set();
-    let resolveRequest;
-    const context = vm.createContext({
-      document: {
-        hidden: false,
-        getElementById: (id) => {
-          assert.ok(elements.has(id), `Unknown page element ${id}`);
-          return elements.get(id);
-        }
-      },
-      window: {},
-      navigator: { userAgent },
-      AbortSignal,
-      Date,
-      setTimeout: (fn) => {
-        timers.add(fn);
-        return fn;
-      },
-      setInterval: (fn) => {
-        timers.add(fn);
-        return fn;
-      },
-      clearTimeout: (fn) => timers.delete(fn),
-      clearInterval: (fn) => timers.delete(fn),
-      fetch: (url) => {
-        calls.push(url);
-        return new Promise((resolve) => {
-          resolveRequest = resolve;
-        });
+  const source = fs.readFileSync(path.join(root, 'web/account-login-ui.js'), 'utf8');
+  const elements = accountLoginElements(html);
+  const calls = [];
+  const context = vm.createContext({
+    document: {
+      getElementById: (id) => {
+        assert.ok(elements.has(id), `Unknown page element ${id}`);
+        return elements.get(id);
       }
-    });
-    vm.runInContext(source, context);
-    context.window.eventWechatLogin.open({ config: { wechat: false }, onSuccess() {} });
-    assert.deepEqual(calls, []);
-    assert.equal(elements.get('loginQrEmpty').textContent, '扫码登录暂未开放');
-    elements.get('loginDialog').close();
-    context.window.eventWechatLogin.open({
-      config: { wechat: true },
-      returnTo: 'wall',
-      onSuccess() {}
-    });
-    assert.deepEqual(calls, ['/api/auth/qr']);
-    resolveRequest({
-      ok: true,
-      json: async () => ({
-        id: 'test-qr',
-        qrImage: 'data:image/png;base64,test',
-        displayCode: '123456',
-        expiresAt: Date.now() + 300000
-      })
-    });
-    await flush();
-    assert.equal(elements.get('loginQrImage').hidden, false);
-    assert.equal(elements.get('loginQrCode').textContent, '123456');
-    assert.equal(elements.get('loginQrDeviceNote').hidden, userAgent === 'Desktop Browser');
-    elements.get('loginDialog').close();
-    assert.equal(timers.size, 0);
-    context.window.eventWechatLogin.open({ config: { wechat: true }, onSuccess() {} });
-    await flush();
-    elements.get('loginDialog').close();
-    resolveRequest({
-      ok: true,
-      json: async () => ({
-        id: 'stale-qr',
-        qrImage: 'data:image/png;base64,stale',
-        displayCode: '999999',
-        expiresAt: Date.now() + 300000
-      })
-    });
-    await flush();
-    assert.equal(elements.get('loginQrImage').hidden, true);
-    assert.equal(timers.size, 0);
-    assert.ok(calls.every((url) => url === '/api/auth/qr'));
-  }
+    },
+    window: {},
+    AbortSignal,
+    Date,
+    JSON,
+    encodeURIComponent,
+    setTimeout: () => 0,
+    clearTimeout: () => {},
+    fetch: async (url, init) => {
+      calls.push({ url, method: init.method, body: JSON.parse(init.body) });
+      const next = responses.shift();
+      if (!next) throw new Error('Unexpected request: ' + url);
+      return next;
+    }
+  });
+  vm.runInContext(source, context);
+  return { elements, calls, api: context.window.eventAccountLogin };
+}
+
+test('account login dialog switches tabs and blocks invalid input before any request', async () => {
+  const { elements, calls, api } = runAccountLogin([]);
+  api.open({ onSuccess() {} });
+  assert.equal(elements.get('loginDialog').open, true);
+  assert.equal(elements.get('loginTitle').textContent, '手机号登录');
+  assert.equal(elements.get('loginSubmit').textContent, '登录 ↗');
+  assert.equal(elements.get('loginConfirmRow').hidden, true);
+  assert.equal(elements.get('loginTabLogin').getAttribute('aria-selected'), 'true');
+  assert.equal(elements.get('loginTabRegister').getAttribute('aria-selected'), 'false');
+
+  elements.get('loginTabRegister').listeners.click();
+  assert.equal(elements.get('loginTitle').textContent, '注册参赛账号');
+  assert.equal(elements.get('loginSubmit').textContent, '注册并登录 ↗');
+  assert.equal(elements.get('loginConfirmRow').hidden, false);
+  assert.equal(elements.get('loginTabRegister').getAttribute('aria-selected'), 'true');
+
+  const submit = elements.get('accountLoginForm').listeners.submit;
+  await submit({ preventDefault() {} });
+  assert.equal(calls.length, 0);
+  assert.match(elements.get('loginHint').textContent, /11位手机号/);
+
+  elements.get('loginPhone').value = '13800138000';
+  elements.get('loginPassword').value = 'abc';
+  await submit({ preventDefault() {} });
+  assert.equal(calls.length, 0);
+  assert.match(elements.get('loginHint').textContent, /至少需要6位/);
+
+  elements.get('loginPassword').value = 'abc123';
+  elements.get('loginConfirm').value = 'abc124';
+  await submit({ preventDefault() {} });
+  assert.equal(calls.length, 0);
+  assert.match(elements.get('loginHint').textContent, /两次输入的密码不一致/);
+
+  elements.get('loginTabLogin').listeners.click();
+  assert.equal(elements.get('loginConfirmRow').hidden, true);
+  assert.equal(elements.get('loginTitle').textContent, '手机号登录');
+  assert.equal(elements.get('loginPhone').value, '13800138000');
 });
 
-test('QR login recovers a lost completion response only after verifying the consumed browser ticket', async () => {
-  const vm = require('node:vm');
-  const html = fs.readFileSync(path.join(root, 'web/index.html'), 'utf8');
-  const source = fs.readFileSync(path.join(root, 'web/wechat-login-ui.js'), 'utf8');
-  for (const authenticated of [true, false]) {
-    const elements = new Map(
-      [...html.matchAll(/id="([^"]+)"/g)].map((m) => [
-        m[1],
-        {
-          hidden: true,
-          open: false,
-          textContent: '',
-          listeners: {},
-          addEventListener(name, callback) {
-            this.listeners[name] = callback;
-          },
-          showModal() {
-            this.open = true;
-          },
-          close() {
-            this.open = false;
-            this.listeners.close?.();
-          }
-        }
-      ])
-    );
-    const timers = new Map(),
-      calls = [],
-      successes = [];
-    let polls = 0;
-    const context = vm.createContext({
-      document: { hidden: false, getElementById: (id) => elements.get(id) },
-      navigator: { userAgent: 'Desktop Browser' },
-      window: {},
-      AbortSignal,
-      Date,
-      setTimeout: (fn, ms) => {
-        timers.set(fn, ms);
-        return fn;
-      },
-      setInterval: (fn, ms) => {
-        timers.set(fn, ms);
-        return fn;
-      },
-      clearTimeout: (fn) => timers.delete(fn),
-      clearInterval: (fn) => timers.delete(fn),
-      fetch: async (url) => {
-        calls.push(url);
-        if (url.endsWith('/complete')) throw new TypeError('Lost response fixture');
-        const data =
-          url === '/api/auth/qr'
-            ? {
-                id: 'fixture',
-                qrImage: 'data:image/png;base64,test',
-                displayCode: '123456',
-                expiresAt: Date.now() + 300000
-              }
-            : url === '/api/session'
-              ? { user: { id: 'wechat-user' }, csrf: 'fixture' }
-              : ++polls === 1
-                ? { status: 'approved' }
-                : { status: 'consumed', authenticated };
-        return { ok: true, json: async () => data };
-      }
-    });
-    vm.runInContext(source, context);
-    context.window.eventWechatLogin.open({
-      config: { wechat: true },
-      returnTo: 'wall',
-      onSuccess: (data) => successes.push(data)
-    });
-    await new Promise((resolve) => setImmediate(resolve));
-    const scheduled = [...timers].find(([, ms]) => ms === 2000)[0];
-    timers.delete(scheduled);
-    await scheduled();
-    assert.equal(successes.length, authenticated ? 1 : 0);
-    assert.equal(calls.includes('/api/session'), authenticated);
-    if (authenticated) {
-      assert.equal(successes[0].destination, 'wall');
-      assert.equal(elements.get('loginDialog').open, false);
-      assert.equal(timers.size, 0);
-    } else elements.get('loginDialog').close();
-  }
+test('account login posts to the matching endpoint and falls back to login when the phone exists', async () => {
+  const { elements, calls, api } = runAccountLogin([
+    { ok: false, status: 409, json: async () => ({ error: '该手机号已注册，请直接登录' }) },
+    { ok: true, status: 200, json: async () => ({ ok: true, user: { id: 'u1' }, csrf: 'c1' }) }
+  ]);
+  const successes = [];
+  api.open({ onSuccess: (data) => successes.push(data) });
+  elements.get('loginTabRegister').listeners.click();
+  elements.get('loginPhone').value = '13800138000';
+  elements.get('loginPassword').value = 'abc123';
+  elements.get('loginConfirm').value = 'abc123';
+  const submit = elements.get('accountLoginForm').listeners.submit;
+
+  await submit({ preventDefault() {} });
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, '/api/auth/register');
+  assert.equal(calls[0].method, 'POST');
+  assert.deepEqual(calls[0].body, { phone: '13800138000', password: 'abc123' });
+  // 已注册时回到登录页签，保留手机号，不关闭弹窗。
+  assert.equal(elements.get('loginSubmit').textContent, '登录 ↗');
+  assert.equal(elements.get('loginConfirmRow').hidden, true);
+  assert.equal(elements.get('loginPhone').value, '13800138000');
+  assert.match(elements.get('loginHint').textContent, /已注册/);
+  assert.equal(elements.get('loginDialog').open, true);
+  assert.equal(successes.length, 0);
+
+  elements.get('loginPassword').value = 'abc123';
+  await submit({ preventDefault() {} });
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].url, '/api/auth/login');
+  assert.deepEqual(calls[1].body, { phone: '13800138000', password: 'abc123' });
+  assert.equal(successes.length, 1);
+  assert.equal(successes[0].csrf, 'c1');
+  assert.equal(elements.get('loginDialog').open, false);
+  assert.equal(elements.get('loginPassword').value, '');
 });

@@ -82,7 +82,7 @@ function updateLogin() {
     button.append(image);
   }
   const label = document.createElement('span');
-  label.textContent = state.user ? `${state.user.nickname} · 退出` : '微信扫码登录 ↗';
+  label.textContent = state.user ? `${state.user.nickname} · 退出` : '登录 / 注册 ↗';
   button.append(label);
   $('previewBar').hidden = !state.config?.preview;
   const demoPane = $('demoLoginPane');
@@ -98,7 +98,7 @@ function showLogin() {
   const returnTo = ['home', 'participate', 'wall', 'account'].includes(location.hash.slice(1))
     ? location.hash.slice(1)
     : 'home';
-  window.eventWechatLogin.open({ config: state.config, returnTo, onSuccess: finishLogin });
+  window.eventAccountLogin.open({ config: state.config, returnTo, onSuccess: finishLogin });
 }
 async function finishLogin(data) {
   state.user = data.user;

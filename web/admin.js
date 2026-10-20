@@ -138,7 +138,7 @@ async function loadList() {
             body = `<h3>${esc(p.realName || '未命名草稿')}</h3><p>${esc(p.realName)} · ${esc(p.phone)} · ${esc(p.school)}</p><p>编号 ${esc(r.id)}</p><p>${esc(p.idType)} · ${esc(p.idNumber)}</p>${p.identityId ? `<a href="api/media/${p.identityId}" target="_blank" rel="noopener"><img class="identity-preview" src="api/media/${p.identityId}" alt="私有身份证明材料"></a>` : ''}`;
           } else
             body = `<h3>${esc(r.title)}</h3><p>@${esc(r.author)} · ${r.votes} 票 · 评委平均 ${Number(r.judge_score).toFixed(1)}</p>${r.theme ? `<p>参赛主题：${esc(r.theme)}</p>` : ''}<p>${esc(r.description)}</p>${r.ai_tools ? `<p>AI工具：${esc(r.ai_tools)}</p>` : ''}${r.creation_process ? `<p>创作流程：${esc(r.creation_process)}</p>` : ''}${r.videoUrl ? `<video controls preload="none" playsinline src="${r.videoUrl}"></video>` : '<p>文字 / 现场实物展示成果</p>'}`;
-          return `<article class="admin-record" data-id="${r.id}"><span class="status ${r.status}">${label[r.status]}</span>${body}${r.note ? `<p class="hint error">退回意见：${esc(r.note)}</p>` : ''}${review && r.status !== 'draft' ? '<label>审核备注 / 退回原因<textarea class="review-note" rows="2" maxlength="500"></textarea></label><div class="actions"><button class="button small mint" data-review="approved">审核通过</button><button class="button small danger" data-review="rejected">退回修改</button></div>' : ''}${mode === 'works' && grade && r.status === 'approved' ? `<div class="actions"><input class="score-box" type="number" min="0" max="100" step="0.1" aria-label="我的评分" value="${r.myScore ?? ''}"><button class="button small outline" data-score>保存我的评分</button></div>` : ''}</article>`;
+          return `<article class="admin-record" data-id="${r.id}"><span class="status ${r.status}">${label[r.status]}</span>${body}${r.note ? `<p class="hint error">退回意见：${esc(r.note)}</p>` : ''}${review && r.status !== 'draft' ? '<label>审核备注 / 退回原因<textarea class="review-note" rows="2" maxlength="500"></textarea></label><div class="actions"><button class="button small mint" data-review="approved">审核通过</button><button class="button small danger" data-review="rejected">退回修改</button></div>' : ''}${mode === 'applications' && state.user.role === 'admin' && r.user_id ? `<div class="actions"><button class="button small outline" data-reset-password="${r.user_id}">重置登录密码</button></div>` : ''}${mode === 'works' && grade && r.status === 'approved' ? `<div class="actions"><input class="score-box" type="number" min="0" max="100" step="0.1" aria-label="我的评分" value="${r.myScore ?? ''}"><button class="button small outline" data-score>保存我的评分</button></div>` : ''}</article>`;
         })
         .join('')
     : '<div class="empty"><h3>这里暂时没有记录。</h3><p>可以切换赛事或状态查看。</p></div>';
@@ -257,12 +257,26 @@ $('adminRows').addEventListener(
   'click',
   guarded(async (e) => {
     const review = e.target.closest('[data-review]'),
-      score = e.target.closest('[data-score]');
-    if (!review && !score) return;
+      score = e.target.closest('[data-score]'),
+      reset = e.target.closest('[data-reset-password]');
+    if (!review && !score && !reset) return;
     const card = e.target.closest('[data-id]'),
-      button = review || score;
+      button = review || score || reset;
     button.disabled = true;
     try {
+      if (reset) {
+        // 参与者无法自助找回密码，只能由管理员当面确认身份后重置。
+        const password = window.prompt(
+          '为该参与者设置新的登录密码（6至64位），并当面或电话告知本人。'
+        );
+        if (password === null) return;
+        await api(`/api/admin/participants/${reset.dataset.resetPassword}/password`, 'POST', {
+          password
+        });
+        await loadList();
+        toast('登录密码已重置，该账号原有登录状态已失效');
+        return;
+      }
       if (review)
         await api(`/api/admin/${state.mode}/${card.dataset.id}/review`, 'POST', {
           status: review.dataset.review,

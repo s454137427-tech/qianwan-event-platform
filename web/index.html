@@ -19,7 +19,7 @@
     <script src="rules-guide.js?v=20261018" defer></script>
     <script src="tos-upload.js" defer></script>
     <link rel="stylesheet" href="wechat-login.css?v=20261009-qr" />
-    <script src="wechat-login-ui.js?v=2.2.2" defer></script>
+    <script src="account-login-ui.js?v=20261020" defer></script>
     <script src="app.js?v=20261019-markup" defer></script>
     <script src="future.js?v=20261006-v2" defer></script>
   </head>
@@ -411,8 +411,8 @@
                 </div>
                 <ol class="guide-entry-steps">
                   <li>
-                    <strong>微信扫码登录</strong>
-                    <p>使用微信完成授权，确认登录当前网页。</p>
+                    <strong>手机号注册登录</strong>
+                    <p>用手机号设置密码即可注册，之后用同一手机号登录。</p>
                   </li>
                   <li>
                     <strong>提交报名资料</strong>
@@ -671,29 +671,69 @@
     </footer>
     <dialog id="loginDialog">
       <button type="button" class="dialog-close" data-close aria-label="关闭登录窗口">×</button>
-      <div class="eyebrow muted">WECHAT SIGN IN</div>
-      <h2>微信扫码登录</h2>
+      <div class="eyebrow muted">PARTICIPANT SIGN IN</div>
+      <h2 id="loginTitle">手机号登录</h2>
       <p id="loginIntro"></p>
-      <p class="hint" id="loginQrDeviceNote" hidden>
-        若无法扫描本机屏幕，请在电脑或另一台设备打开活动网站，再用手机微信扫码。
-      </p>
-      <section id="loginQrPane">
-        <div class="login-qr-frame">
-          <img id="loginQrImage" alt="微信扫码登录二维码" width="240" height="240" hidden />
-          <div id="loginQrEmpty">正在准备登录…</div>
+      <section id="loginAccountPane">
+        <div class="login-tabs" role="tablist" aria-label="登录或注册">
+          <button
+            type="button"
+            class="login-tab"
+            id="loginTabLogin"
+            role="tab"
+            aria-selected="true"
+            aria-controls="accountLoginForm"
+          >
+            登录
+          </button>
+          <button
+            type="button"
+            class="login-tab"
+            id="loginTabRegister"
+            role="tab"
+            aria-selected="false"
+            aria-controls="accountLoginForm"
+          >
+            注册新账号
+          </button>
         </div>
-        <p class="hint" id="loginQrStatus" role="status" aria-live="polite"></p>
-        <div class="login-qr-code" id="loginQrVerification">
-          <span>手机确认时请核对验证码</span><strong id="loginQrCode">—</strong>
-        </div>
-        <p class="hint" id="loginQrCountdown"></p>
-        <button type="button" class="button outline" id="loginQrRefresh">刷新二维码</button>
-        <div class="login-qr-steps">
-          微信扫一扫 → 核对验证码 → 手机确认<br />确认后，当前网页自动登录。
-        </div>
+        <form id="accountLoginForm" class="login-form" novalidate>
+          <label
+            >手机号<input
+              id="loginPhone"
+              name="phone"
+              type="tel"
+              inputmode="numeric"
+              maxlength="11"
+              autocomplete="tel-national"
+              placeholder="请输入11位手机号"
+              required
+          /></label>
+          <label
+            >密码<input
+              id="loginPassword"
+              name="password"
+              type="password"
+              maxlength="64"
+              autocomplete="current-password"
+              placeholder="请输入密码"
+              required
+          /></label>
+          <label id="loginConfirmRow" hidden
+            >确认密码<input
+              id="loginConfirm"
+              name="confirm"
+              type="password"
+              maxlength="64"
+              autocomplete="new-password"
+              placeholder="再输入一次密码"
+          /></label>
+          <button class="button mint" type="submit" id="loginSubmit">登录 ↗</button>
+          <p class="hint" id="loginHint" role="status" aria-live="polite"></p>
+        </form>
       </section>
       <p id="loginDataNote">
-        登录自动识别微信账号，昵称和头像以微信实际授权结果为准；真实姓名和手机号在报名时填写。
+        登录仅用于识别参赛账号，真实姓名、学校等资料在报名时填写。忘记密码可联系工作人员重置。
       </p>
       <div class="login-divider"><span>或</span></div>
       <section id="demoLoginPane" hidden>
