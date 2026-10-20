@@ -186,11 +186,15 @@
 .contest-rules {
   scroll-margin-top: 24px;
 }
-.draft-notice {
+.draft-notice,
+.theme-note {
   padding: 16px 20px;
   border-left: 3px solid #79ffe2;
   background: #102634;
   font-size: 14px;
+}
+.theme-note {
+  margin: 20px 0 0;
 }
 .schedule-grid {
   display: grid;

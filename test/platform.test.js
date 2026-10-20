@@ -1085,14 +1085,14 @@ test('contest metadata, concurrent theme limits and resubmission are enforced on
     client.request('/api/works', 'POST', secondBody),
     client.request('/api/works', 'POST', {
       ...body,
-      theme: '假如我穿越了',
+      theme: '自由创作',
       videoId: thirdVideo,
       submissionKey: 'contest-race-third'
     })
   ]);
   assert.deepEqual(capRace.map((r) => r.status).sort(), [200, 400]);
   const second = capRace.find((r) => r.status === 200).data.work;
-  const unusedTheme = ['科技·自然·爱', '假如我穿越了'].find((t) => t !== second.theme);
+  const unusedTheme = ['科技·自然·爱', '自由创作'].find((t) => t !== second.theme);
   const third = await client.request('/api/works', 'POST', {
     ...body,
     theme: unusedTheme,

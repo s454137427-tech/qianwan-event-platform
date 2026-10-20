@@ -35,3 +35,6 @@ preview/
 !/deploy/火山TOS接入.md
 /.tos-sdk-patch/
 /deploy/nginx.conf.example
+
+# 本地打包与预览产物（不入库）
+/dist/
