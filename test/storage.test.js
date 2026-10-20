@@ -108,11 +108,10 @@ test('Volcengine AssumeRole command intersects upload role with one exact object
       Resource: ['trn:tos:::qianwan-test/' + task.object_key]
     });
     assert.ok(!p.Statement[0].Action.some((a) => /Get|ListBucket|Acl/.test(a)));
-    assert.deepEqual(p.Statement[1].Condition.StringEquals['x-tos-acl'], [
-      'public-read',
-      'public-read-write',
-      'authenticated-read'
-    ]);
+    // 火山 STS 不识别 x-tos-acl 条件键，任何 Condition 都会导致 HTTP 400，策略必须只有一条 Allow。
+    assert.equal(p.Statement.length, 1);
+    assert.equal(p.Statement[0].Effect, 'Allow');
+    assert.ok(!p.Statement[0].Action.includes('tos:PutObjectAcl'));
     return {
       Result: {
         Credentials: {
