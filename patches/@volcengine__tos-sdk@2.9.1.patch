@@ -1,0 +1,59 @@
+diff --git a/browser/tos.esm.js b/browser/tos.esm.js
+index 341e19d95025665c9408fd6b5fed4050bebff587..e84ddcdc68d489fab881e9b56da810bd5896a2be 100644
+--- a/browser/tos.esm.js
++++ b/browser/tos.esm.js
+@@ -4237,7 +4237,7 @@ class TOSBase {
+       idleConnectionTime: _default(_opts.idleConnectionTime, 30000),
+       maxRetryCount: _default(_opts.maxRetryCount, 3),
+       enableCRC: (_opts$enableCRC2 = _opts.enableCRC) != null ? _opts$enableCRC2 : false,
+-      requestAdapter: getAdapter()
++      requestAdapter: _opts.requestAdapter || getAdapter()
+     };
+   }
+ 
+@@ -4419,7 +4419,7 @@ class TOSBase {
+     const signv4 = new ISigV4Credentials(this.opts.stsToken, this.opts.accessKeySecret, this.opts.accessKeyId);
+     const sig = new SignersV4({
+       algorithm: 'TOS4-HMAC-SHA256',
+-      region: this.opts.endpoint,
++      region: this.opts.region,
+       serviceName: 'tos',
+       // SignV4 uses this.options.bucket, so set it here
+       bucket: input.bucket,
+diff --git a/dist/index.js b/dist/index.js
+index ba35f51b3a02922a7141c5ea265dcbc73af84903..38fb81cf3f7649be7397716460143cbed00347e1 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1,8 +1,2 @@
+-
+-'use strict'
+-
+-if (process.env.NODE_ENV === 'production') {
+-  module.exports = require('./tos.cjs.production.min.js')
+-} else {
+-  module.exports = require('./tos.cjs.development.js')
+-}
++'use strict';
++module.exports = require('./tos.cjs.development.js');
+diff --git a/dist/tos.cjs.development.js b/dist/tos.cjs.development.js
+index 5d57c5b5037dd925ab727666b326411c4e5d1c39..e43ae61d27247e302577657256a811860e4edcf2 100644
+--- a/dist/tos.cjs.development.js
++++ b/dist/tos.cjs.development.js
+@@ -5023,7 +5023,7 @@ class TOSBase {
+       idleConnectionTime: _default(_opts.idleConnectionTime, 30000),
+       maxRetryCount: _default(_opts.maxRetryCount, 3),
+       enableCRC: (_opts$enableCRC2 = _opts.enableCRC) != null ? _opts$enableCRC2 : false,
+-      requestAdapter: getAdapter()
++      requestAdapter: _opts.requestAdapter || getAdapter()
+     };
+   }
+ 
+@@ -5244,7 +5244,7 @@ class TOSBase {
+     const signv4 = new ISigV4Credentials(this.opts.stsToken, this.opts.accessKeySecret, this.opts.accessKeyId);
+     const sig = new SignersV4({
+       algorithm: 'TOS4-HMAC-SHA256',
+-      region: this.opts.endpoint,
++      region: this.opts.region,
+       serviceName: 'tos',
+       // SignV4 uses this.options.bucket, so set it here
+       bucket: input.bucket,

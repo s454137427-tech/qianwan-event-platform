@@ -29,6 +29,7 @@ test('participant saves queue snapshots in order and send the most recently save
     me = { applications: [], works: [], votes: [] };
   let resolveFirst;
   const context = vm.createContext({
+    createTosUploader: require('../web/tos-upload').createTosUploader,
     document: { getElementById: (id) => elements.get(id), querySelectorAll: () => [] },
     window: { addEventListener() {} },
     location: { hash: '#home' },

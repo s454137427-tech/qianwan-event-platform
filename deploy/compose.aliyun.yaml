@@ -1,0 +1,75 @@
+# 阿里云单机活动部署扩展：在 compose.yaml 基础上增加同机 PostgreSQL 与 Redis。
+# 现有 compose.yaml 只运行 app1 / app2 / gateway，数据库与缓存默认按外部服务对待。
+#
+# 用法（在 deploy 目录执行）：
+#   docker compose --env-file .env.production -f compose.yaml -f compose.aliyun.yaml up -d --build
+#
+# 前提：deploy/.env.production 中除模板原有项外，还需设置
+#   POSTGRES_PASSWORD=<强密码>
+#   REDIS_PASSWORD=<强密码>
+#   DATABASE_URL=postgres://qianwan:<同一密码>@postgres:5432/qianwan
+#   DATABASE_SSL=false
+#   REDIS_URL=redis://:<同一密码>@redis:6379
+#
+# 注意：同机数据库未开启 TLS，DATABASE_SSL 为 false；不得暴露数据库/缓存公网端口。
+# 数据保存在 deploy/data/ 下；在线备份使用 pg_dump 并离机保存、验证恢复。
+# 冷拷贝目录须先停写并干净停止数据库，不能复制活动数据库目录作为一致备份。
+name: qianwan-events
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: qianwan
+      POSTGRES_USER: qianwan
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?deploy/.env.production 需设置 POSTGRES_PASSWORD}
+      TZ: Asia/Shanghai
+    volumes:
+      - ./data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U qianwan -d qianwan']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?deploy/.env.production 需设置 REDIS_PASSWORD}
+      TZ: Asia/Shanghai
+    command: ['sh', '-c', 'exec redis-server --appendonly yes --requirepass "$$REDIS_PASSWORD"']
+    volumes:
+      - ./data/redis:/data
+    healthcheck:
+      test: ['CMD-SHELL', 'REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG']
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+
+  app1:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  app2:
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy

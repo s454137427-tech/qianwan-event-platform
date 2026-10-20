@@ -1,0 +1,69 @@
+{
+  "serverRamPolicy": {
+    "Version": "1",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": ["sts:AssumeRole"],
+        "Resource": ["acs:ram::<ACCOUNT_ID>:role/<UPLOAD_ROLE>"]
+      },
+      {
+        "Effect": "Allow",
+        "Action": ["oss:GetObject"],
+        "Resource": ["acs:oss:*:*:<BUCKET>/private/*", "acs:oss:*:*:<BUCKET>/protected/*"]
+      },
+      {
+        "Effect": "Allow",
+        "Action": [
+          "oss:PutObject",
+          "oss:PutObjectAcl",
+          "oss:AbortMultipartUpload",
+          "oss:ListParts"
+        ],
+        "Resource": ["acs:oss:*:*:<BUCKET>/protected/*"]
+      }
+    ]
+  },
+  "uploadRoleTrustPolicy": {
+    "Version": "1",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": "sts:AssumeRole",
+        "Principal": { "RAM": ["acs:ram::<ACCOUNT_ID>:user/<SERVER_RAM_USER>"] }
+      }
+    ]
+  },
+  "uploadRolePolicy": {
+    "Version": "1",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": ["oss:PutObject", "oss:ListParts", "oss:AbortMultipartUpload"],
+        "Resource": ["acs:oss:*:*:<BUCKET>/private/*"]
+      },
+      {
+        "Effect": "Deny",
+        "Action": ["oss:PutObject", "oss:PutObjectAcl"],
+        "Resource": ["acs:oss:*:*:<BUCKET>/private/*"],
+        "Condition": {
+          "StringEquals": { "oss:x-oss-object-acl": ["public-read", "public-read-write"] }
+        }
+      }
+    ]
+  },
+  "corsRule": {
+    "AllowedOrigin": ["https://<EVENT_DOMAIN>"],
+    "AllowedMethod": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+    "AllowedHeader": ["*"],
+    "ExposeHeader": [
+      "ETag",
+      "x-oss-request-id",
+      "x-oss-hash-crc64ecma",
+      "Content-Length",
+      "Content-Range",
+      "Accept-Ranges"
+    ],
+    "MaxAgeSeconds": 300
+  }
+}

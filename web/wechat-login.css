@@ -168,3 +168,48 @@
     height: 220px;
   }
 }
+.login-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 22px 0 14px;
+  color: #8aa0bb;
+  font-size: 13px;
+}
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.16);
+}
+#demoLoginPane .eyebrow {
+  margin-bottom: 6px;
+}
+#demoLoginPane .hint {
+  margin: 4px 0 12px;
+}
+.login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.login-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  color: #c3d4e7;
+}
+.login-form input {
+  padding: 11px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  color: #eef5fc;
+  font-size: 15px;
+}
+.login-form input:focus {
+  outline: none;
+  border-color: #4fd1c5;
+}

@@ -65,60 +65,73 @@ test('release allowlist excludes credentials, operational data and review copies
     assert.ok(files.includes(name));
 });
 
-test('the rebuilt browser COS SDK initializes multipart upload and escapes completion XML', async () => {
-  const vm = require('node:vm');
-  const { browserSdk } = require('../lib/browser-sdk');
-  const source = await browserSdk();
-  const bodies = [];
-  class XHR {
-    upload = {};
-    open(method, url) {
-      this.url = url;
-    }
-    setRequestHeader() {}
-    getAllResponseHeaders() {
-      return 'content-type: application/xml';
-    }
-    send(body) {
-      bodies.push(body);
-      this.status = 200;
-      this.response = this.url.includes('uploadId=')
-        ? '<CompleteMultipartUploadResult><ETag>"completed"</ETag><Key>fixture.mp4</Key></CompleteMultipartUploadResult>'
-        : '<InitiateMultipartUploadResult><Bucket>fixture-1234567890</Bucket><Key>fixture.mp4</Key><UploadId>fixture-upload</UploadId></InitiateMultipartUploadResult>';
-      queueMicrotask(() => this.onload());
-    }
+test('production TOS preflight accepts only the supported private-domain configuration and rejects legacy CDN', () => {
+  const env = {
+    ...process.env,
+    NODE_ENV: 'production',
+    STORAGE_DRIVER: 'tos',
+    APP_ORIGIN: 'https://mega.gynnai.com',
+    DATABASE_URL: 'postgresql://fixture:fixture@postgres:5432/event',
+    REDIS_URL: 'redis://:fixture@redis:6379',
+    DATABASE_SSL: 'false',
+    TOS_ACCESS_KEY_ID: 'fixture-id',
+    TOS_ACCESS_KEY_SECRET: 'fixture-secret',
+    TOS_BUCKET: 'fixture-bucket',
+    TOS_REGION: 'cn-beijing',
+    TOS_ENDPOINT: 'tos-cn-beijing.volces.com',
+    TOS_PUBLIC_ORIGIN: 'https://media.gynnai.com',
+    TOS_UPLOAD_ROLE_TRN: 'trn:iam::2000012345:role/uploader',
+    WECHAT_APPID: 'fixture-appid',
+    WECHAT_SECRET: 'fixture-wechat-secret',
+    ADMIN_PASSWORD: 'fixture-password-123456',
+    ORGANIZER_NAME: '测试',
+    CONTACT_TEXT: '测试',
+    PRIVACY_NOTICE: '测试',
+    RULES_CONFIRMED: 'true',
+    ALLOW_DEV_LOGIN: 'false',
+    VIDEO_CDN_ORIGIN: '',
+    VIDEO_CDN_AUTH_KEY: '',
+    VIDEO_CDN_AUTH_CONFIRMED: 'false'
+  };
+  const run = (overrides) =>
+    spawnSync(process.execPath, ['scripts/check-deployment.js'], {
+      cwd: root,
+      env: { ...env, ...overrides },
+      encoding: 'utf8'
+    });
+  const good = run({});
+  assert.equal(good.status, 0, good.stderr);
+  const result = JSON.parse(good.stdout);
+  assert.equal(result.scope, 'configuration-only');
+  assert.equal(result.storage, 'tos');
+  assert.equal(result.cdn, false);
+  for (const overrides of [
+    { STORAGE_DRIVER: 'cos' },
+    { STORAGE_DRIVER: 'local' },
+    { TOS_ACCESS_KEY_ID: '' },
+    { TOS_PUBLIC_ORIGIN: 'http://media.test.cn' },
+    { TOS_PUBLIC_ORIGIN: 'https://bucket.oss-cn-hangzhou.aliyuncs.com' },
+    { TOS_PUBLIC_ORIGIN: 'https://127.0.0.1' },
+    { TOS_PUBLIC_ORIGIN: 'https://media.test.cn/path' },
+    { TOS_PUBLIC_ORIGIN: 'https://mega.gynnai.com' },
+    { TOS_REGION: 'ap-shanghai' },
+    { TOS_UPLOAD_ROLE_TRN: '*' },
+    { TOS_ENDPOINT: '' },
+    { TOS_ENDPOINT: 'tos-s3-cn-beijing.volces.com' },
+    { TOS_ENDPOINT: 'tos-cn-shanghai.volces.com' },
+    { STORAGE_DRIVER: 'oss' },
+    {
+      VIDEO_CDN_ORIGIN: 'https://cdn.test.cn',
+      VIDEO_CDN_AUTH_KEY: 'fixture-key',
+      VIDEO_CDN_AUTH_CONFIRMED: 'true'
+    },
+    { ALLOW_DEV_LOGIN: 'true' }
+  ]) {
+    const bad = run(overrides);
+    assert.notEqual(bad.status, 0);
+    assert.ok(!bad.stderr.includes('fixture-secret'));
+    assert.ok(!bad.stdout.includes('fixture-secret'));
   }
-  const context = vm.createContext({
-    window: {},
-    navigator: { userAgent: 'Desktop Browser' },
-    location: { protocol: 'https:' },
-    XMLHttpRequest: XHR,
-    btoa,
-    atob,
-    setTimeout,
-    clearTimeout,
-    setInterval,
-    clearInterval,
-    console
-  });
-  vm.runInContext(source, context);
-  const cos = new context.COS({ SecretId: 'fixture-id', SecretKey: 'fixture-key', Timeout: 2000 });
-  const call = (method, options) =>
-    new Promise((resolve, reject) =>
-      cos[method](
-        { Bucket: 'fixture-1234567890', Region: 'ap-shanghai', Key: 'fixture.mp4', ...options },
-        (error, result) => (error ? reject(error) : resolve(result))
-      )
-    );
-  const init = await call('multipartInit', {});
-  assert.equal(init.UploadId, 'fixture-upload');
-  const complete = await call('multipartComplete', {
-    UploadId: init.UploadId,
-    Parts: [{ PartNumber: 1, ETag: '"part&fixture"' }]
-  });
-  assert.equal(complete.ETag, '"completed"');
-  assert.match(bodies[1], /&amp;/);
-  assert.ok(!bodies[1].includes('part&fixture'));
 });
 
 test('login dialog offers one QR flow for both desktop and WeChat, and ignores closed requests', async () => {

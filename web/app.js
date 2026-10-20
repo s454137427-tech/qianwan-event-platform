@@ -6,7 +6,7 @@ const esc = (value) =>
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]
   );
 const labels = { draft: '草稿', pending: '待审核', approved: '已通过', rejected: '退回修改' };
-const events = { film: 'AI 不喊 CUT · 未来影像大赛' };
+const events = { film: 'AIGC未来影像大赛' };
 const state = {
   config: null,
   user: null,
@@ -85,6 +85,8 @@ function updateLogin() {
   label.textContent = state.user ? `${state.user.nickname} · 退出` : '微信扫码登录 ↗';
   button.append(label);
   $('previewBar').hidden = !state.config?.preview;
+  const demoPane = $('demoLoginPane');
+  if (demoPane) demoPane.hidden = !state.config?.devLogin;
 }
 function requireLogin() {
   if (state.user) return true;
@@ -155,7 +157,7 @@ function populateApplication() {
   hint(
     'identityHint',
     p.identityId
-      ? '身份照片已保存，可在“我的参与”查看。'
+      ? '身份照片已保存，可在“我的作品”查看。'
       : '仅本人与有权限的审核人员可查看，提交后由工作人员核验。'
   );
   if (state.user?.role === 'participant' && !$('workForm').elements.author.value)
@@ -176,7 +178,7 @@ function switchEvent(type) {
     '先提交身份材料，再上传影像作品。资格核验与作品审核通过后，作品进入公开广场。';
   $('workIntro').textContent = '请先提交上方报名资料。作品通过审核后公开展示。';
   $('videoHint').textContent =
-    `影像作品建议约 ${Math.round((state.config?.expectedVideoSeconds || 180) / 60)} 分钟，单个文件最多 ${state.config?.maxVideoMb || 500}MB。\n支持 MP4 / MOV / WebM；推荐 MP4（H.264 视频 / AAC 音频）。\n每账号累计最多 ${state.config?.uploadQuotaMb || 3072}MB、${state.config?.uploadMaxFiles || 50} 个文件。上传中断后，重新选择原文件即可继续。`;
+    `作品要求15—180秒、1080P及以上，单个文件最多 ${state.config?.maxVideoMb || 500}MB。\n支持 MP4 / MOV；推荐 MP4（H.264 视频 / AAC 音频）。规格由工作人员审核。\n每个报名账号最多2件，每主题1件。上传中断后，重新选择原文件即可继续。`;
   $('workForm').reset();
   $('uploadProgress').hidden = true;
   hint('workHint', '');
@@ -226,7 +228,7 @@ async function persistApplication(submit, automatic, captured) {
     hint(
       'saveHint',
       submit
-        ? '报名已收到！你可以在“我的参与”查看审核结果。'
+        ? '报名已收到！你可以在“我的作品”查看审核结果。'
         : `草稿已保存 · ${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}`
     );
     if (submit) populateApplication();
@@ -249,6 +251,32 @@ function progress(percent, message) {
   $('progress').value = percent;
   $('progressText').textContent = message;
 }
+let tosSdkPromise;
+const tosUploader = createTosUploader({
+  api,
+  get storage() {
+    try {
+      return window.localStorage;
+    } catch {
+      return undefined;
+    }
+  },
+  loadSdk() {
+    if (!tosSdkPromise)
+      tosSdkPromise = new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = 'vendor/tos.js';
+        script.onload = () => resolve(window.TOS);
+        script.onerror = () => {
+          tosSdkPromise = undefined;
+          script.remove();
+          reject(new Error('上传组件加载失败，请重试'));
+        };
+        document.head.append(script);
+      });
+    return tosSdkPromise;
+  }
+});
 async function uploadFile(file, kind) {
   const limit = kind === 'identity' ? 5 * 1024 ** 2 : state.config.maxVideoMb * 1024 ** 2;
   if (file.size > limit || file.size < 12)
@@ -267,11 +295,13 @@ async function uploadFile(file, kind) {
     }
   });
   if (task.status === 'ready') {
+    tosUploader.clear(task);
     state.uploadCancel = null;
     $('pauseUpload').disabled = true;
     progress(100, '已恢复上传完成的文件');
     return task.id;
   }
+  if (state.paused) throw new Error('上传已暂停，重新选择同一文件即可继续。');
   if (task.driver === 'local') {
     const uploaded = new Set(task.parts),
       total = task.totalChunks;
@@ -306,68 +336,28 @@ async function uploadFile(file, kind) {
       }
       progress(Math.round(((i + 1) / total) * 95), `${file.name} · ${i + 1}/${total} 分片已保存`);
     }
-  } else {
-    await new Promise((resolve, reject) => {
-      let taskId;
-      const cos = new COS({
-        Timeout: 60000,
-        getAuthorization(options, callback) {
-          api(`/api/uploads/${task.id}/credentials`, { method: 'POST' })
-            .then((data) =>
-              callback({
-                TmpSecretId: data.credentials.tmpSecretId,
-                TmpSecretKey: data.credentials.tmpSecretKey,
-                SecurityToken: data.credentials.sessionToken,
-                StartTime: data.startTime,
-                ExpiredTime: data.expiredTime
-              })
-            )
-            .catch((error) => {
-              if (taskId) cos.cancelTask(taskId);
-              reject(error);
-            });
-        }
-      });
-      state.uploadCancel = () => {
-        state.paused = true;
-        if (taskId) cos.cancelTask(taskId);
-        reject(new Error('上传已暂停，重新选择同一文件即可继续。'));
-      };
-      api(`/api/uploads/${task.id}/credentials`, { method: 'POST' })
-        .then((info) => {
-          if (state.paused) return;
-          cos.uploadFile(
-            {
-              Bucket: info.Bucket,
-              Region: info.Region,
-              Key: info.Key,
-              Body: file,
-              SliceSize: 5 * 1024 ** 2,
-              ChunkSize: 5 * 1024 ** 2,
-              onTaskReady(id) {
-                taskId = id;
-                if (state.paused) cos.cancelTask(id);
-              },
-              onProgress(data) {
-                if (state.paused) return;
-                progress(
-                  Math.round(data.percent * 95),
-                  `${file.name} · 已上传 ${Math.round(data.percent * 100)}%`
-                );
-              }
-            },
-            (error) =>
-              error ? reject(new Error('云端上传中断，请重新选择同一文件继续')) : resolve()
-          );
-        })
-        .catch(reject);
-    });
-  }
+  } else if (task.driver === 'tos') {
+    const controller = new AbortController();
+    state.uploadCancel = () => {
+      state.paused = true;
+      controller.abort();
+    };
+    await tosUploader.upload(task, file, { signal: controller.signal, progress });
+  } else throw new Error('不支持的存储方式');
   state.uploadCancel = null;
   if (state.paused) throw new Error('上传已暂停，保留原文件后可继续。');
   $('pauseUpload').disabled = true;
   progress(97, '正在核对文件完整性…');
-  await api(`/api/uploads/${task.id}/complete`, { method: 'POST' });
+  for (let retry = 0; ; retry++) {
+    try {
+      await api(`/api/uploads/${task.id}/complete`, { method: 'POST' });
+      break;
+    } catch (error) {
+      if (retry >= 2 || (error.status && error.status < 500)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (retry + 1)));
+    }
+  }
+  tosUploader.clear(task);
   progress(100, '文件已保存');
   return task.id;
 }
@@ -383,17 +373,18 @@ function renderAccount() {
   const applications = state.me?.applications || [],
     works = state.me?.works || [];
   $('accountContent').innerHTML =
-    `<div class="section-heading"><h2>我的报名</h2></div><div class="account-grid">${applications.length ? applications.map((a) => `<article class="panel record">${statusTag(a.status)}<h3>${esc(events[a.competition])}</h3><p>编号：${esc(a.id)}</p><p>${esc(a.payload.realName || '草稿资料')} </p>${a.note ? `<p class="hint error">修改意见：${esc(a.note)}</p>` : ''}${a.payload.identityId ? `<p><a class="inline-link" href="api/media/${a.payload.identityId}" target="_blank" rel="noopener">查看我提交的身份照片 ↗</a></p>` : ''}<div class="actions"><button class="button small outline" data-edit-application="${a.competition}">${['draft', 'rejected'].includes(a.status) ? '继续填写' : '查看报名'}</button></div></article>`).join('') : '<div class="empty"><h3>还没有报名记录</h3><a href="#participate" class="button dark">报名影像大赛 ↗</a></div>'}</div><div class="section-heading"><h2>我的作品</h2></div><div class="account-grid">${works.length ? works.map((w) => `<article class="panel record">${statusTag(w.status)}<h3>${esc(w.title)}</h3><p>${esc(events[w.competition])} · ${esc(w.author)}</p><p>作品编号：${esc(w.id)}</p>${w.note ? `<p class="hint error">修改意见：${esc(w.note)}</p>` : ''}${w.video_id ? `<p><a class="inline-link" href="api/media/${w.video_id}" target="_blank" rel="noopener">查看我的视频 ↗</a></p>` : ''}${w.status === 'rejected' ? `<button class="button small outline" data-edit-work="${w.id}">修改并重新提交</button>` : ''}</article>`).join('') : '<div class="empty"><p>作品提交后，审核进度会显示在这里。</p></div>'}</div>`;
+    `<div class="section-heading"><h2>我的报名</h2></div><div class="account-grid">${applications.length ? applications.map((a) => `<article class="panel record">${statusTag(a.status)}<h3>${esc(events[a.competition])}</h3><p>编号：${esc(a.id)}</p><p>${esc(a.payload.realName || '草稿资料')} </p>${a.note ? `<p class="hint error">修改意见：${esc(a.note)}</p>` : ''}${a.payload.identityId ? `<p><a class="inline-link" href="api/media/${a.payload.identityId}" target="_blank" rel="noopener">查看我提交的身份照片 ↗</a></p>` : ''}<div class="actions"><button class="button small outline" data-edit-application="${a.competition}">${['draft', 'rejected'].includes(a.status) ? '继续填写' : '查看报名'}</button></div></article>`).join('') : '<div class="empty"><h3>还没有报名记录</h3><a href="#participate" class="button dark">报名影像大赛 ↗</a></div>'}</div><div class="section-heading"><h2>我的作品</h2></div><div class="account-grid">${works.length ? works.map((w) => `<article class="panel record">${statusTag(w.status)}<h3>${esc(w.title)}</h3><p>${esc(events[w.competition])} · ${esc(w.author)}</p><p>作品编号：${esc(w.id)}</p>${w.theme ? `<p class="work-theme">主题：${esc(w.theme)}</p>` : ''}${w.description ? `<p>${esc(w.description)}</p>` : ''}${w.ai_tools ? `<p>AI工具：${esc(w.ai_tools)}</p>` : ''}${w.creation_process ? `<p>创作流程：${esc(w.creation_process)}</p>` : ''}${w.note ? `<p class="hint error">修改意见：${esc(w.note)}</p>` : ''}${w.video_id ? `<p><a class="inline-link" href="api/media/${w.video_id}" target="_blank" rel="noopener">查看我的视频 ↗</a></p>` : ''}${w.status === 'rejected' ? `<button class="button small outline" data-edit-work="${w.id}">修改并重新提交</button>` : ''}</article>`).join('') : '<div class="empty"><p>作品提交后，审核进度会显示在这里。</p></div>'}</div>`;
 }
 async function loadWall() {
-  $('wallRules').textContent = state.config.rules[state.wall];
+  $('wallRules').textContent =
+    `投票与评选规则：${state.config.rules[state.wall]} 投票日期：10月25—30日；现场终评与最终结果以赛事核算、公示为准。`;
   const data = await api(`/api/works?competition=${state.wall}&page=${state.page}`);
   const voted = new Set(state.me?.votes.map((v) => v.work_id) || []);
   $('worksGrid').innerHTML = data.items.length
     ? data.items
         .map(
           (w) =>
-            `<article class="work-card"><div class="work-media">${w.videoUrl ? `<button data-play="${w.id}" aria-label="播放 ${esc(w.title)}">▶</button>` : '<span aria-hidden="true">✳</span>'}</div><div class="work-body"><h3>${esc(w.title)}</h3><p>@${esc(w.author)}</p><p>${esc(w.description)}</p>${state.wall === 'film' ? `<div class="work-scores"><span>评委 ${w.judgeScore}</span><span>网络 ${w.networkScore}</span><span>综合 ${w.finalScore}</span></div>` : ''}<div class="work-footer"><button class="button small outline" data-vote="${w.id}" ${voted.has(w.id) ? 'disabled' : ''}>${voted.has(w.id) ? '已投票 ✓' : '投一票 ↗'}</button><span>${w.votes} 票</span></div></div></article>`
+            `<article class="work-card"><div class="work-media">${w.videoUrl ? `<button data-play="${w.id}" aria-label="播放 ${esc(w.title)}">▶</button>` : '<span aria-hidden="true">✳</span>'}</div><div class="work-body"><h3>${esc(w.title)}</h3><p>@${esc(w.author)}</p>${w.theme ? `<p class="work-theme">${esc(w.theme)}</p>` : ''}<p>${esc(w.description)}</p>${w.aiTools ? `<p class="work-process">AI工具：${esc(w.aiTools)}</p>` : ''}${w.creationProcess ? `<p class="work-process">创作流程：${esc(w.creationProcess)}</p>` : ''}<div class="work-footer"><button class="button small outline" data-vote="${w.id}" ${voted.has(w.id) ? 'disabled' : ''}>${voted.has(w.id) ? '已投票 ✓' : '投一票 ↗'}</button><span>${w.votes} 票</span></div></div></article>`
         )
         .join('')
     : '<div class="empty"><h3>好作品，值得等待。</h3><p>审核通过的作品会在这里亮相。</p><a href="#participate" class="button dark">提交我的灵感 ↗</a></div>';
@@ -417,16 +408,18 @@ async function loadWall() {
     );
 }
 async function route() {
-  const name = ['home', 'participate', 'wall', 'account'].includes(location.hash.slice(1))
-    ? location.hash.slice(1)
-    : 'home';
+  const target = location.hash.slice(1);
+  const name = ['home', 'participate', 'wall', 'account'].includes(target) ? target : 'home';
   document.querySelectorAll('[data-page]').forEach((s) => (s.hidden = s.dataset.page !== name));
   document.querySelectorAll('nav a').forEach((a) => {
-    const active = a.hash === `#${name}`;
+    const active = a.hash === '#rules' ? name === 'home' : a.hash === `#${name}`;
     a.classList.toggle('active', active);
     if (active) a.setAttribute('aria-current', 'page');
     else a.removeAttribute('aria-current');
   });
+  if (target === 'rules') $('contestRules').scrollIntoView({ block: 'start' });
+  else if (route.previous !== name) window.scrollTo({ top: 0, behavior: 'instant' });
+  route.previous = name;
   if (name === 'account') {
     await refreshMe();
     renderAccount();
@@ -462,6 +455,24 @@ $('loginButton').addEventListener('click', async () => {
     handleError(e);
   } finally {
     state.busy = false;
+  }
+});
+$('demoLoginForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!state.config?.devLogin) return toast('演示登录未开放');
+  const alias = $('demoAlias').value.trim();
+  if (!/^[\p{L}\p{N}_-]{2,30}$/u.test(alias)) {
+    return hint('demoLoginHint', '昵称须为2至30个中英文字、数字或下划线', true);
+  }
+  try {
+    const data = await api('/api/auth/dev', { method: 'POST', body: { alias } });
+    const returnTo = ['home', 'participate', 'wall', 'account'].includes(location.hash.slice(1))
+      ? location.hash.slice(1)
+      : 'home';
+    hint('demoLoginHint', '');
+    await finishLogin({ user: data.user, csrf: data.csrf, destination: returnTo });
+  } catch (err) {
+    hint('demoLoginHint', err.message, true);
   }
 });
 document
@@ -535,9 +546,19 @@ $('workForm').addEventListener('submit', async (e) => {
     title: form.elements.title.value,
     author: form.elements.author.value,
     description: form.elements.description.value,
+    theme: form.elements.theme.value,
+    aiTools: form.elements.aiTools.value,
+    creationProcess: form.elements.creationProcess.value,
     videoId: editing?.video_id || null,
     submissionKey: state.submissionKey || (state.submissionKey = crypto.randomUUID())
   };
+  const otherWorks = (state.me?.works || []).filter((w) => w.id !== editing?.id);
+  if (!editing && otherWorks.length >= 2)
+    return hint('workHint', '每个报名账号最多提交2件作品。退回作品请修改原记录。', true);
+  if (otherWorks.some((w) => w.theme === body.theme))
+    return hint('workHint', '该主题已有作品，请选择其他主题或修改退回记录。', true);
+  if (file && !/\.(mp4|mov)$/i.test(file.name))
+    return hint('workHint', '请选择MP4或MOV格式的视频文件。', true);
   state.busy = true;
   $('submitWork').disabled = true;
   $('submitWork').textContent = '正在保存作品…';
@@ -547,7 +568,7 @@ $('workForm').addEventListener('submit', async (e) => {
       method: editing ? 'PUT' : 'POST',
       body
     });
-    hint('workHint', `作品已收到，编号 ${data.work.id.slice(0, 8)}。审核进度见“我的参与”。`);
+    hint('workHint', `作品已收到，编号 ${data.work.id.slice(0, 8)}。审核进度见“我的作品”。`);
     toast('作品提交成功');
     form.reset();
     state.editWork = null;
@@ -599,7 +620,10 @@ $('accountContent').addEventListener('click', (e) => {
     switchEvent(work.competition);
     state.editWork = work;
     const form = $('workForm');
-    for (const name of ['title', 'author', 'description']) form.elements[name].value = work[name];
+    for (const name of ['title', 'author', 'description', 'theme'])
+      form.elements[name].value = work[name] || '';
+    form.elements.aiTools.value = work.ai_tools || '';
+    form.elements.creationProcess.value = work.creation_process || '';
     hint('workHint', `修改意见：${work.note}。可更换视频后重新提交。`);
     location.hash = 'participate';
   }
@@ -623,7 +647,7 @@ window.addEventListener('beforeunload', (e) => {
 (async () => {
   state.config = await api('/api/config');
   if (!state.config.preview) {
-    $('rulesNote').textContent = `咨询：${state.config.contact}`;
+    $('rulesNote').textContent = '报名10月21—28日，投票10月25—30日。具体起止时刻以赛事公告为准。';
     const dialog = $('privacyDialog');
     dialog.querySelectorAll('p').forEach((p) => p.remove());
     const notice = document.createElement('p');

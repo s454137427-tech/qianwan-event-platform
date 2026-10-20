@@ -1,0 +1,84 @@
+{
+  "serverIamPolicy": {
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": ["sts:AssumeRole"],
+        "Resource": ["trn:iam::<ACCOUNT_ID>:role/<UPLOAD_ROLE>"]
+      },
+      {
+        "Effect": "Allow",
+        "Action": ["tos:GetObject"],
+        "Resource": ["trn:tos:::<BUCKET>/private/*", "trn:tos:::<BUCKET>/protected/*"]
+      },
+      {
+        "Effect": "Allow",
+        "Action": ["tos:PutObject", "tos:PutObjectAcl"],
+        "Resource": ["trn:tos:::<BUCKET>/protected/*"]
+      }
+    ]
+  },
+  "uploadRoleTrustPolicy": {
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": ["sts:AssumeRole"],
+        "Principal": {
+          "IAM": ["trn:iam::<ACCOUNT_ID>:user/<SERVER_IAM_USER>"]
+        }
+      }
+    ]
+  },
+  "uploadRolePolicy": {
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Action": ["tos:PutObject", "tos:ListMultipartUploadParts", "tos:AbortMultipartUpload"],
+        "Resource": ["trn:tos:::<BUCKET>/private/*"]
+      },
+      {
+        "Effect": "Deny",
+        "Action": ["tos:PutObject", "tos:PutObjectAcl"],
+        "Resource": ["trn:tos:::<BUCKET>/private/*"],
+        "Condition": {
+          "StringEquals": {
+            "x-tos-acl": ["public-read", "public-read-write", "authenticated-read"]
+          }
+        }
+      }
+    ]
+  },
+  "bucketDenyPublicAclPolicy": {
+    "Statement": [
+      {
+        "Sid": "DenyPublicMaterialAcl",
+        "Effect": "Deny",
+        "Principal": "*",
+        "Action": ["tos:PutObject", "tos:PutObjectAcl"],
+        "Resource": ["trn:tos:::<BUCKET>/private/*", "trn:tos:::<BUCKET>/protected/*"],
+        "Condition": {
+          "StringEquals": {
+            "x-tos-acl": ["public-read", "public-read-write", "authenticated-read"]
+          }
+        }
+      }
+    ]
+  },
+  "cors": {
+    "CORSRules": [
+      {
+        "AllowedOrigins": ["https://mega.gynnai.com"],
+        "AllowedMethods": ["GET", "HEAD", "PUT", "POST", "DELETE"],
+        "AllowedHeaders": ["*"],
+        "ExposeHeaders": [
+          "ETag",
+          "x-tos-request-id",
+          "Content-Length",
+          "Content-Range",
+          "Accept-Ranges"
+        ],
+        "MaxAgeSeconds": 300
+      }
+    ]
+  }
+}

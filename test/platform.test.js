@@ -142,7 +142,7 @@ after(async () => {
 test('public visitors cannot read the backend, use legacy demo endpoints, or write without CSRF', async () => {
   const guest = new Client();
   assert.equal((await guest.request('/api/admin/works')).status, 401);
-  assert.equal((await guest.request('/vendor/cos.js')).status, 200);
+  assert.equal((await guest.request('/vendor/tos.js')).status, 404);
   assert.equal((await guest.request('/api/demo/login', 'POST')).status, 404);
   assert.equal(
     (await author.request('/api/uploads', 'POST', {}, { headers: { 'X-CSRF-Token': '' } })).status,
@@ -199,6 +199,9 @@ test('film submission requires identity review before publication and never disc
     title: '测试影像',
     author: '创作者',
     description: '自动化测试素材',
+    theme: '未来生活想象',
+    aiTools: '测试工具',
+    creationProcess: '生成后剪辑',
     videoId,
     submissionKey: 'film-idempotency-1'
   };
@@ -228,6 +231,9 @@ test('film submission requires identity review before publication and never disc
       'title',
       'author',
       'description',
+      'theme',
+      'aiTools',
+      'creationProcess',
       'votes',
       'videoUrl',
       'judgeScore',
@@ -389,7 +395,7 @@ test('cancelled competition rejects all old entry points and retained records st
 test('public configuration exposes only film and registration deadline closes applications', async () => {
   const guest = new Client(),
     config = await guest.ok('/api/config');
-  assert.equal(config.siteName, '前湾印象城MEGA');
+  assert.equal(config.siteName, '上海虹桥前湾印象城MEGA');
   assert.deepEqual(config.competitions, ['film']);
   assert.deepEqual(Object.keys(config.rules), ['film']);
   const deadline = platform.config.deadlines.registration;
@@ -951,6 +957,9 @@ test('event archives restrict access, preserve records, redact client data and r
   assert.ok(!internalText.includes('禁止归档的密码字段'));
   assert.match(client.get('02-报名与审核.csv'), /'\=HYPERLINK/);
   assert.match(client.get('03-作品与成绩.csv'), /'\=ArchiveTitle/);
+  assert.match(client.get('03-作品与成绩.csv'), /参赛主题/);
+  assert.match(client.get('03-作品与成绩.csv'), /AI工具/);
+  assert.match(client.get('03-作品与成绩.csv'), /生成后剪辑/);
   const line = client
     .get('03-作品与成绩.csv')
     .split('\r\n')
@@ -998,6 +1007,178 @@ test('domain verification serves only expected text files and health endpoints s
   assert.equal((await guest.ok('/api/health')).ok, true);
   assert.equal(
     (await platform.db.query('SELECT COUNT(*) AS count FROM schema_migrations')).rows[0].count,
-    1
+    2
   );
+});
+
+test('contest metadata, concurrent theme limits and resubmission are enforced on the server', async () => {
+  await admin.ok('/api/admin/settings', 'PUT', { registrationOpen: true, votingOpen: true });
+  const client = await participant('ContestLimits');
+  const identity = await upload(client, 'identity');
+  await client.ok('/api/applications/film', 'PUT', {
+    submit: true,
+    payload: {
+      realName: '测试作者',
+      phone: '13800000000',
+      idType: '身份证',
+      idNumber: 'TEST-CONTEST',
+      identityId: identity,
+      consent: true
+    }
+  });
+  const body = {
+    competition: 'film',
+    title: '主题作品',
+    author: '测试作者',
+    theme: '未来生活想象',
+    description: '作品阐述',
+    aiTools: '测试工具',
+    creationProcess: '生成后剪辑',
+    submissionKey: 'contest-first'
+  };
+  for (const invalid of [
+    { theme: '' },
+    { theme: '不存在的主题' },
+    { description: '字'.repeat(201) },
+    { description: '   ' },
+    { aiTools: '' },
+    { creationProcess: '' },
+    { aiTools: 'a'.repeat(201) }
+  ])
+    assert.equal((await client.request('/api/works', 'POST', { ...body, ...invalid })).status, 400);
+  async function video(marker) {
+    const buffer = bytes('video');
+    buffer.write(marker, 32);
+    const item = await task(client, 'video', buffer);
+    await sendPart(client, item, 0, buffer);
+    await client.ok(`/api/uploads/${item.id}/complete`, 'POST');
+    return item.id;
+  }
+  body.videoId = await video('first');
+  await platform.db.query('UPDATE uploads SET filename=$1 WHERE id=$2', [
+    'fixture.webm',
+    body.videoId
+  ]);
+  assert.equal((await client.request('/api/works', 'POST', body)).status, 400);
+  await platform.db.query('UPDATE uploads SET filename=$1 WHERE id=$2', [
+    'fixture.mp4',
+    body.videoId
+  ]);
+  const concurrent = await Promise.all([
+    client.request('/api/works', 'POST', body),
+    client.request('/api/works', 'POST', { ...body, submissionKey: 'contest-duplicate-theme' })
+  ]);
+  assert.deepEqual(concurrent.map((r) => r.status).sort(), [200, 400]);
+  const first = concurrent.find((r) => r.status === 200).data.work;
+  assert.equal(first.theme, body.theme);
+  assert.equal(first.ai_tools, body.aiTools);
+  assert.equal(first.creation_process, body.creationProcess);
+  assert.equal((await client.ok('/api/works', 'POST', body)).work.id, first.id);
+  const secondBody = {
+    ...body,
+    theme: '科技·自然·爱',
+    videoId: await video('second'),
+    submissionKey: 'contest-second'
+  };
+  const thirdVideo = await video('third');
+  const capRace = await Promise.all([
+    client.request('/api/works', 'POST', secondBody),
+    client.request('/api/works', 'POST', {
+      ...body,
+      theme: '假如我穿越了',
+      videoId: thirdVideo,
+      submissionKey: 'contest-race-third'
+    })
+  ]);
+  assert.deepEqual(capRace.map((r) => r.status).sort(), [200, 400]);
+  const second = capRace.find((r) => r.status === 200).data.work;
+  const unusedTheme = ['科技·自然·爱', '假如我穿越了'].find((t) => t !== second.theme);
+  const third = await client.request('/api/works', 'POST', {
+    ...body,
+    theme: unusedTheme,
+    submissionKey: 'contest-third'
+  });
+  assert.equal(third.status, 400);
+  assert.match(third.data.error, /最多提交2件/);
+  await admin.ok(`/api/admin/works/${first.id}/review`, 'POST', {
+    status: 'rejected',
+    note: '补充创作说明'
+  });
+  assert.equal(
+    (await client.request(`/api/works/${first.id}`, 'PUT', { ...body, theme: second.theme }))
+      .status,
+    400
+  );
+  assert.equal(
+    (
+      await client.request(`/api/works/${first.id}`, 'PUT', {
+        ...body,
+        description: '字'.repeat(201)
+      })
+    ).status,
+    400
+  );
+  const updated = (
+    await client.ok(`/api/works/${first.id}`, 'PUT', {
+      ...body,
+      theme: unusedTheme,
+      description: '已补充的阐述'
+    })
+  ).work;
+  assert.equal(updated.status, 'pending');
+  assert.equal(updated.theme, unusedTheme);
+  assert.equal((await client.ok('/api/me')).works.length, 2);
+  const reviewed = await admin.ok('/api/admin/works?competition=film&status=pending');
+  assert.equal(reviewed.items.find((w) => w.id === first.id).ai_tools, body.aiTools);
+});
+
+test('theme metadata migration preserves legacy works and is safe to reopen', async () => {
+  const { openDatabase } = require('../lib/database');
+  const config = { ...platform.config, dataDir: path.join(directory, 'legacy-migration') };
+  let db = await openDatabase(config);
+  try {
+    await db.query('INSERT INTO users(id,identity_key,nickname,created_at) VALUES($1,$2,$3,$4)', [
+      'legacy-author',
+      'dev:legacy',
+      '旧作者',
+      1
+    ]);
+    await db.query(
+      'INSERT INTO works(id,user_id,competition,title,author,description,status,created_at,updated_at,submission_key) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+      [
+        'legacy-work',
+        'legacy-author',
+        'film',
+        '旧作品',
+        '旧作者',
+        '旧说明'.repeat(100),
+        'rejected',
+        1,
+        1,
+        'legacy-key'
+      ]
+    );
+    for (const column of ['theme', 'ai_tools', 'creation_process'])
+      await db.query(`ALTER TABLE works DROP COLUMN ${column}`);
+    await db.query('DELETE FROM schema_migrations WHERE version=$1', [2]);
+  } finally {
+    await db.close();
+  }
+  for (let i = 0; i < 2; i++) {
+    db = await openDatabase(config);
+    try {
+      const old = (await db.query('SELECT * FROM works WHERE id=$1', ['legacy-work'])).rows[0];
+      assert.equal(old.description, '旧说明'.repeat(100));
+      assert.equal(old.status, 'rejected');
+      assert.equal(old.theme, '');
+      assert.equal(old.ai_tools, '');
+      assert.equal(old.creation_process, '');
+      assert.equal(
+        (await db.query('SELECT COUNT(*) AS count FROM schema_migrations')).rows[0].count,
+        2
+      );
+    } finally {
+      await db.close();
+    }
+  }
 });

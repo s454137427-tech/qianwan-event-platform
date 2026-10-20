@@ -1,6 +1,6 @@
 # Generate nginx.container.conf with pnpm deploy:prepare; do not edit the generated domain by hand.
 # Place TLS files in deploy/certs/.
-# Both application instances use the same external PostgreSQL, Redis and COS.
+# Both application instances use the same PostgreSQL, Redis and private TOS bucket.
 upstream event_api {
     server app1:3000 max_fails=3 fail_timeout=15s;
     server app2:3000 max_fails=3 fail_timeout=15s;

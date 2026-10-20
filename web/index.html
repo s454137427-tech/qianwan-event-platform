@@ -6,25 +6,28 @@
     <meta name="theme-color" content="#030713" />
     <meta
       name="description"
-      content="前湾印象城MEGA：参与 AI 不喊 CUT · 未来影像大赛，上传影像作品，让想象走进屏幕。"
+      content="AIGC未来影像大赛｜印力科技生活节 2026 SCPG AI FESTIVAL。10月21日报名，28日截稿，10月30日现场活动。"
     />
-    <title>前湾印象城MEGA</title>
+    <title>AIGC未来影像大赛 · 印力科技生活节 2026 SCPG AI FESTIVAL</title>
     <link rel="stylesheet" href="style.css" />
     <link rel="stylesheet" href="tech.css?v=20261006" />
     <link rel="stylesheet" href="future.css?v=20261006-v2" />
     <link rel="stylesheet" href="readability.css?v=20261007" />
     <link rel="stylesheet" href="brand.css?v=20261009" />
-    <script src="vendor/cos.js" defer></script>
+    <link rel="stylesheet" href="festival.css?v=20261019-markup" />
+    <link rel="stylesheet" href="rules-guide.css?v=20261019-markup" />
+    <script src="rules-guide.js?v=20261018" defer></script>
+    <script src="tos-upload.js" defer></script>
     <link rel="stylesheet" href="wechat-login.css?v=20261009-qr" />
     <script src="wechat-login-ui.js?v=2.2.2" defer></script>
-    <script src="app.js?v=2.2.2" defer></script>
+    <script src="app.js?v=20261019-markup" defer></script>
     <script src="future.js?v=20261006-v2" defer></script>
   </head>
   <body>
     <script src="required-fields.js?v=20261007" defer></script>
     <canvas id="ambientCanvas" aria-hidden="true"></canvas>
     <div class="preview-bar" id="previewBar" hidden>
-      建设预览 · 请使用测试资料。正式入口计划于 10 月 25 日开放。
+      建设预览 · 请使用测试资料。10月21日报名、28日截稿，10月30日现场活动；公众号接入待完成。
     </div>
     <header class="site-header">
       <a class="brand" href="#home"
@@ -33,133 +36,418 @@
           src="assets/qianwan-mega-logo.png"
           width="780"
           height="238"
-          alt="前湾印象城MEGA"
-        /><span aria-hidden="true">前湾印象城MEGA<small>科技造节 · 2026</small></span></a
+          alt="上海虹桥前湾印象城MEGA"
+        /><span class="festival-wordmark">2026 SCPG<br /><small>AI FESTIVAL</small></span></a
       >
       <nav aria-label="主导航">
-        <a href="#home">活动首页</a><a href="#participate">我要参与</a><a href="#wall">作品广场</a
-        ><a href="#account">我的参与</a>
+        <a href="#rules">大赛赛制</a><a href="#wall">作品广场</a><a href="#participate">报名入口</a
+        ><a href="#account">我的作品</a>
       </nav>
-      <button class="button small" id="loginButton">登录参与 ↗</button>
+      <div class="header-actions">
+        <button class="button small" id="loginButton">登录参与 ↗</button>
+      </div>
     </header>
     <main>
       <section data-page="home" class="page">
         <div class="hero">
           <div class="hero-copy">
-            <div class="eyebrow">
-              <span class="live-dot"></span> QIANWAN MEGA / TECH FESTIVAL 2026
-            </div>
-            <div class="hero-kicker"><span>AI × HUMAN</span> 上海虹桥前湾 · 科技造节</div>
+            <div class="eyebrow"><span class="live-dot"></span> 2026 SCPG AI FESTIVAL</div>
+            <div class="hero-kicker"><span>AIGC × FILM</span> 印力科技生活节</div>
             <h1>
-              <span class="hero-title-line">万物皆 <em>IN</em></span
-              ><span class="hero-title-outline">未来，由你创造。</span>
+              <span class="hero-title-line event-title-en">AIGC</span
+              ><span class="hero-title-line event-title-cn">未来影像大赛</span>
             </h1>
-            <p>与 AI 一起创作，用影像重新想象生活。<br />让脑洞跳出屏幕，让未来从这里发生。</p>
+            <p class="hero-subtitle">印力科技生活节<br /><span>2026 SCPG AI FESTIVAL</span></p>
+            <p>
+              选择一个创作方向，用 AI 完成你的影像故事。<br />线上征集、专业评审，让作品走进线下展映。
+            </p>
             <div class="actions">
               <a class="button mint" href="#participate">报名 / 投稿 <span>↗</span></a
               ><a class="text-link" href="#wall">探索作品广场 →</a>
             </div>
-            <div class="hero-date">
-              <strong>10<span>.</span>25</strong
-              ><span>2026 / 网站计划上线<br />前湾印象城MEGA</span>
+            <div class="hero-date hero-key-dates" aria-label="2026年活动安排">
+              <div class="event-window"><strong>10/21—10/28</strong><span>作品征集</span></div>
+              <div class="event-window"><strong>10/30</strong><span>线下展演</span></div>
+              <span class="hero-location">2026 · 上海虹桥前湾印象城MEGA</span>
             </div>
           </div>
-          <div class="hero-art" aria-hidden="true">
-            <div class="holo-ring ring-outer"></div>
-            <div class="holo-ring ring-inner"></div>
-            <div class="holo-axis"></div>
-            <span class="art-label top">NEXT DIMENSION / 无限想象</span
-            ><img
-              class="tech-core"
-              src="assets/hero-in-v2.png"
-              alt=""
-              width="600"
-              height="600"
-              fetchpriority="high"
-              decoding="async"
-            /><span class="art-coordinate coordinate-one">AI<br />CREATIVITY</span
-            ><span class="art-coordinate coordinate-two">+</span>
-            <div class="core-caption"><span class="core-marker"></span> 灵感发生 · 万物皆 IN</div>
-            <span class="art-label bottom">BEYOND THE SCREEN — INTO THE FUTURE</span>
-          </div>
-          <div class="hero-rail" aria-hidden="true">
-            <span>01 / 约 3 分钟未来影像</span><span>线上投稿 · 审核上墙</span
-            ><span>CREATE THE NEXT</span>
+          <div class="hero-art robot-hero" aria-hidden="true">
+            <div class="robot-frame">
+              <img
+                class="robot-core"
+                src="assets/hero-robot.png"
+                alt=""
+                width="1760"
+                height="2368"
+                fetchpriority="high"
+                decoding="async"
+              />
+            </div>
           </div>
         </div>
-        <div class="ticker" aria-hidden="true">
-          人 IN <span>✳</span> 科技 IN <span>✳</span> 品牌 IN <span>✳</span> 灵感 IN
-          <span>✳</span> 让万物碰个面 <span>↗</span>
-        </div>
-        <div class="section-heading">
+        <section class="festival-intro festival-section" aria-labelledby="festivalTitle">
           <div>
-            <div class="eyebrow muted">CREATE YOUR NEXT STORY</div>
-            <h2>让想象，成为下一帧。</h2>
+            <div class="eyebrow muted">ABOUT THE FESTIVAL</div>
+            <h2 id="festivalTitle">印力科技生活节</h2>
+            <p class="hint">2026 SCPG AI FESTIVAL</p>
           </div>
-          <p>AI 不喊 CUT · 未来影像大赛，期待你的故事。</p>
-        </div>
-        <div class="event-grid">
-          <article class="event-card film-card">
-            <div class="event-top">
-              <span class="pill">01 / 未来影像大赛</span
-              ><span class="event-symbol" aria-hidden="true">↗</span>
-            </div>
-            <div class="event-visual film-visual" aria-hidden="true">
-              <svg viewBox="0 0 180 180" fill="none">
-                <path d="M25 32H155V148H25V32Z" />
-                <path d="M39 47H141V133H39V47Z" />
-                <path d="M76 66L115 90L76 114V66Z" />
-                <path
-                  d="M37 23V42M62 23V42M87 23V42M112 23V42M137 23V42M37 138V157M62 138V157M87 138V157M112 138V157M137 138V157"
-                />
-              </svg>
-            </div>
-            <span class="event-index" aria-hidden="true">01</span>
-            <h3>AI 不喊 CUT</h3>
-            <p>现实拍不到的，AI 接着拍。<br />上传你的未来影像，让想象走进屏幕。</p>
-            <div class="event-tags">
-              <span>线上投稿</span><span>审核上墙</span><span>公众票选</span>
-            </div>
-            <a class="button dark" href="#participate" data-select-event="film">上传影像作品 ↗</a>
-          </article>
-        </div>
-        <div class="how-section">
           <div>
-            <div class="eyebrow muted">FROM IDEA TO REALITY</div>
-            <h2>参与，比想象更简单。</h2>
+            <p>
+              AIGC未来影像大赛是科技生活节的核心活动板块。活动面向AIGC创作者、高校青年和影像爱好者，以线上作品征集连接线下艺术沙龙、影像展映和交流。
+            </p>
+            <p>
+              从日常生活出发，用影像呈现对科技、自然和未来的想象，参与线上征集、艺术沙龙、作品展映与现场交流。
+            </p>
           </div>
-          <ol>
-            <li>
-              <b>01</b>
-              <div>
-                <strong>了解赛事</strong>
-                <p>了解影像大赛规则，准备你的故事与作品。</p>
+        </section>
+        <section class="festival-section" aria-labelledby="themesTitle">
+          <div class="section-heading">
+            <div>
+              <div class="eyebrow muted">THREE CREATIVE DIRECTIONS</div>
+              <h2 id="themesTitle">你的故事，从一个主题开始。</h2>
+            </div>
+          </div>
+          <div class="theme-grid">
+            <article class="theme-card">
+              <span>01 / FUTURE LIFE</span>
+              <h3>未来生活想象</h3>
+              <p>用影像表达你对未来生活的想象。</p>
+            </article>
+            <article class="theme-card">
+              <span>02 / TECHNOLOGY &amp; LOVE</span>
+              <h3>科技·自然·爱</h3>
+              <p>以科技、自然与爱为创作主题。</p>
+            </article>
+            <article class="theme-card">
+              <span>03 / TIME TRAVEL</span>
+              <h3>假如我穿越了</h3>
+              <p>从一次穿越出发，展开你的故事。</p>
+            </article>
+          </div>
+        </section>
+        <section
+          id="contestRules"
+          class="festival-section contest-rules"
+          aria-labelledby="rulesTitle"
+        >
+          <div class="section-heading guide-heading">
+            <div>
+              <div class="eyebrow muted">COMPETITION GUIDE</div>
+              <h2 id="rulesTitle">大赛赛制与活动详情</h2>
+              <p>从作品要求到活动安排，一页看清。</p>
+            </div>
+            <a class="button mint" href="#participate">前往报名 ↗</a>
+          </div>
+          <div class="guide-overview">
+            <div class="guide-date">
+              <span>活动日期 · 已确认</span><strong>10<span>月</span>30<span>日</span></strong
+              ><span>2026年</span>
+            </div>
+            <div class="guide-summary">
+              <h3>AIGC未来影像大赛</h3>
+              <p>AI不喊CUT · 面向AIGC创作者、高校青年与影像爱好者</p>
+              <p class="guide-location">活动场地：上海虹桥前湾印象城MEGA · 1F中庭</p>
+            </div>
+            <div class="guide-event-dates" aria-label="重要活动安排">
+              <div><strong>10/21—10/28</strong><span>作品征集</span></div>
+              <div><strong>10/30</strong><span>线下展演</span></div>
+            </div>
+          </div>
+          <p class="guide-status-note">
+            报名：10月21—28日 · 投票：10月25—30日 · 现场活动：10月30日 ·
+            展映：10月30日至11月1日。奖项与参赛规则按活动方案列示。
+          </p>
+          <div class="guide-layout">
+            <aside class="guide-sidebar" aria-label="详情快速定位">
+              <span class="guide-menu-label">快速定位</span>
+              <div class="guide-menu">
+                <button type="button" data-guide-target="guideRequirements" aria-current="location">
+                  <span>01</span>参赛要求</button
+                ><button type="button" data-guide-target="guideSchedule">
+                  <span>02</span>活动流程</button
+                ><button type="button" data-guide-target="guideJudging">
+                  <span>03</span>评审方式</button
+                ><button type="button" data-guide-target="guideRewards">
+                  <span>04</span>奖项设置</button
+                ><button type="button" data-guide-target="guideEntry">
+                  <span>05</span>如何报名
+                </button>
               </div>
-            </li>
-            <li>
-              <b>02</b>
-              <div>
-                <strong>提交报名</strong>
-                <p>保存资料、完成申请，随时查询处理状态。</p>
-              </div>
-            </li>
-            <li>
-              <b>03</b>
-              <div>
-                <strong>让灵感亮相</strong>
-                <p>在线上传影像作品，审核通过后公开展示。</p>
-              </div>
-            </li>
-          </ol>
-        </div>
+              <p class="guide-menu-note">全部内容在本页展开<br />点击目录可直接定位</p>
+            </aside>
+            <div class="guide-content">
+              <section
+                id="guideRequirements"
+                class="guide-chapter"
+                tabindex="-1"
+                aria-labelledby="requirementsTitle"
+              >
+                <div class="guide-chapter-heading">
+                  <span>01</span>
+                  <h3 id="requirementsTitle">参赛要求</h3>
+                </div>
+                <p class="guide-lead">选择一个主题，提交一段由AI创作的影像故事。</p>
+                <dl class="guide-specs">
+                  <div>
+                    <dt>视频时长</dt>
+                    <dd>15—180 <small>秒</small></dd>
+                  </div>
+                  <div>
+                    <dt>分辨率</dt>
+                    <dd>1080P <small>及以上</small></dd>
+                  </div>
+                  <div>
+                    <dt>单件大小</dt>
+                    <dd>≤ 500 <small>MB</small></dd>
+                  </div>
+                  <div>
+                    <dt>文件格式</dt>
+                    <dd>MP4 / MOV</dd>
+                  </div>
+                  <div>
+                    <dt>每个报名账号</dt>
+                    <dd>最多 2 <small>件</small></dd>
+                  </div>
+                  <div>
+                    <dt>每个创作主题</dt>
+                    <dd>限 1 <small>件</small></dd>
+                  </div>
+                </dl>
+                <dl class="guide-facts">
+                  <div>
+                    <dt>创作主题</dt>
+                    <dd>未来生活想象 / 科技·自然·爱 / 假如我穿越了。每件作品选择一个主题。</dd>
+                  </div>
+                  <div>
+                    <dt>画面要求</dt>
+                    <dd>
+                      主要画面由AIGC生成，实拍素材不超过30%。横竖屏均可，优先横屏适配展映；规格由工作人员审核。
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>随作品提交</dt>
+                    <dd>
+                      200字以内作品阐述、所用AI工具及简单创作流程。退回作品请在原记录中修改重投。
+                    </dd>
+                  </div>
+                  <div>
+                    <dt>参赛对象</dt>
+                    <dd>
+                      面向社会公开征集。个人或3人以内团队均可参赛；未成年人须提供监护人书面同意。在校学生需提供学生身份证明。团队及未成年人材料提交方式另行公布。
+                    </dd>
+                  </div>
+                </dl>
+              </section>
+              <section
+                id="guideSchedule"
+                class="guide-chapter"
+                tabindex="-1"
+                aria-labelledby="scheduleTitle"
+              >
+                <div class="guide-chapter-heading">
+                  <span>02</span>
+                  <h3 id="scheduleTitle">活动流程</h3>
+                </div>
+                <p class="guide-lead">10月21日开始报名，10月30日举行现场活动。</p>
+                <ol class="guide-timeline">
+                  <li class="timeline-confirmed">
+                    <span class="timeline-index">1</span>
+                    <div>
+                      <div class="timeline-heading">
+                        <h4>报名与作品征集</h4>
+                        <span class="guide-badge confirmed">10月21—28日</span>
+                      </div>
+                      <p>10月21日开放报名，10月28日截稿。填写资料、选择主题、上传并提交作品。</p>
+                      <p class="guide-secondary">
+                        投稿截止以作品上传并提交完成为准，具体截止时刻另行通知。
+                      </p>
+                    </div>
+                  </li>
+                  <li class="timeline-confirmed">
+                    <span class="timeline-index">2</span>
+                    <div>
+                      <div class="timeline-heading">
+                        <h4>线上人气投票</h4>
+                        <span class="guide-badge confirmed">10月25—30日</span>
+                      </div>
+                      <p>为审核通过并公开展示的作品投票，投票期与征集期部分重叠。</p>
+                      <p class="guide-secondary">投票具体起止时刻另行通知。</p>
+                    </div>
+                  </li>
+                  <li>
+                    <span class="timeline-index">3</span>
+                    <div>
+                      <div class="timeline-heading">
+                        <h4>线上初评</h4>
+                        <span class="guide-badge">按活动方案安排</span>
+                      </div>
+                      <p>专业评委独立打分，筛选TOP20入围作品。</p>
+                      <p class="guide-secondary">方案安排为10月28—29日，具体场次另行通知。</p>
+                    </div>
+                  </li>
+                  <li class="timeline-confirmed">
+                    <span class="timeline-index">4</span>
+                    <div>
+                      <div class="timeline-heading">
+                        <h4>现场活动</h4>
+                        <span class="guide-badge confirmed">10月30日</span>
+                      </div>
+                      <p>AI艺术沙龙、导演分享、AI视频展映、入围作品终评及颁奖。</p>
+                      <p class="guide-secondary">
+                        上海虹桥前湾印象城MEGA ·
+                        1F中庭，13:00起签到，14:00活动开场，具体流程按现场安排。
+                      </p>
+                    </div>
+                  </li>
+                  <li class="timeline-confirmed">
+                    <span class="timeline-index">5</span>
+                    <div>
+                      <div class="timeline-heading">
+                        <h4>作品展映与交流</h4>
+                        <span class="guide-badge confirmed">10月30日—11月1日</span>
+                      </div>
+                      <p>影像展映、现场交流与活动回顾，11月1日安排获奖作品专场。</p>
+                    </div>
+                  </li>
+                </ol>
+              </section>
+              <section
+                id="guideJudging"
+                class="guide-chapter"
+                tabindex="-1"
+                aria-labelledby="judgingTitle"
+              >
+                <div class="guide-chapter-heading">
+                  <span>03</span>
+                  <h3 id="judgingTitle">评审方式</h3>
+                  <span class="guide-badge">按活动方案</span>
+                </div>
+                <p class="guide-lead">线上初评、线下终评；最终总分由专业评审与人气投票组成。</p>
+                <div class="guide-score">
+                  <div>
+                    <strong>60<span>%</span></strong
+                    ><span>专业评审</span>
+                  </div>
+                  <span class="score-plus" aria-hidden="true">＋</span>
+                  <div>
+                    <strong>40<span>%</span></strong
+                    ><span>人气投票</span>
+                  </div>
+                </div>
+                <dl class="guide-facts">
+                  <div>
+                    <dt>现场评审规则</dt>
+                    <dd>专业评委独立评分，去掉最高分和最低分后取平均。</dd>
+                  </div>
+                  <div>
+                    <dt>人气分计算</dt>
+                    <dd>第一名记40分，其余作品得分＝本作品票数 ÷ 第一名票数 × 40。</dd>
+                  </div>
+                </dl>
+                <p class="guide-footnote">
+                  投票时间为10月25—30日。现场终评与最终结果以赛事核算、公示为准。投票次数、同分处理与两轮成绩衔接另行说明。
+                </p>
+              </section>
+              <section
+                id="guideRewards"
+                class="guide-chapter"
+                tabindex="-1"
+                aria-labelledby="rewardsTitle"
+              >
+                <div class="guide-chapter-heading">
+                  <span>04</span>
+                  <h3 id="rewardsTitle">奖项设置</h3>
+                  <span class="guide-badge">按活动方案</span>
+                </div>
+                <p class="guide-lead">按活动方案设置以下奖项；奖金及奖品以三方书面确认版本为准。</p>
+                <ul class="guide-awards">
+                  <li class="award-first">
+                    <div>
+                      <span class="award-rank">一等奖 · 1名</span>
+                      <h4>未来影像大奖</h4>
+                    </div>
+                    <p>
+                      <strong>20,000 <small>元</small></strong
+                      ><span>奖金方案</span>
+                    </p>
+                  </li>
+                  <li>
+                    <div>
+                      <span class="award-rank">二等奖 · 2名</span>
+                      <h4>奖金方案</h4>
+                    </div>
+                    <p>
+                      <strong>5,000 <small>元 / 名</small></strong>
+                    </p>
+                  </li>
+                  <li>
+                    <div>
+                      <span class="award-rank">三等奖 · 3名</span>
+                      <h4>奖品方案</h4>
+                    </div>
+                    <p>方案标注奖品2,000元<br /><span>具体奖品以书面确认版本为准</span></p>
+                  </li>
+                  <li>
+                    <div>
+                      <span class="award-rank">TOP20 · 20名</span>
+                      <h4>入围奖</h4>
+                    </div>
+                    <p>入围证书＋定制纪念礼<br /><span>覆盖全部获奖选手</span></p>
+                  </li>
+                </ul>
+                <p class="guide-footnote">
+                  一、二、三等奖方案均含奖杯、证书及创作者专访。最终奖金、奖品、领取条件，以及最佳人气奖、主题优胜奖和奖项能否兼得，由主办方统一公布。
+                </p>
+              </section>
+              <section
+                id="guideEntry"
+                class="guide-chapter"
+                tabindex="-1"
+                aria-labelledby="entryTitle"
+              >
+                <div class="guide-chapter-heading">
+                  <span>05</span>
+                  <h3 id="entryTitle">如何报名</h3>
+                </div>
+                <ol class="guide-entry-steps">
+                  <li>
+                    <strong>微信扫码登录</strong>
+                    <p>使用微信完成授权，确认登录当前网页。</p>
+                  </li>
+                  <li>
+                    <strong>提交报名资料</strong>
+                    <p>填写真实信息与身份材料，提交后由工作人员核验。</p>
+                  </li>
+                  <li>
+                    <strong>选择主题并上传作品</strong>
+                    <p>填写作品阐述、AI工具和创作流程，上传并提交视频。</p>
+                  </li>
+                  <li>
+                    <strong>在“我的作品”查看进度</strong>
+                    <p>资格及作品审核通过后公开展示；如被退回，按意见修改重投。</p>
+                  </li>
+                </ol>
+                <div class="guide-actions">
+                  <a class="button mint" href="#participate">前往报名 ↗</a>
+                </div>
+                <div class="guide-rights">
+                  <h4>原创与授权须知</h4>
+                  <p>
+                    作品须原创，不侵犯他人著作权、肖像权等权益，内容遵守法律法规与公序良俗。入围作品授权主办方用于赛事展映及宣传推广。参赛报名须知、版权授权协议及监护人同意书在方案中列为附件，正文和具体办理方式另行提供。
+                  </p>
+                </div>
+              </section>
+            </div>
+          </div>
+        </section>
       </section>
       <section data-page="participate" class="page content-page" hidden>
         <div class="section-heading">
           <div>
             <div class="eyebrow muted">YOUR IDEA STARTS HERE</div>
-            <h1 class="page-title">报名与投稿</h1>
+            <h1 class="page-title">报名入口</h1>
           </div>
-          <p>资料可先存草稿，准备好了再提交。</p>
+          <p>10月21日起报名，10月28日截稿。资料可先存草稿，准备好了再提交。</p>
         </div>
         <div class="participation-layout">
           <div>
@@ -241,21 +529,49 @@
                   <p id="workIntro">请先提交上方报名资料。作品通过审核后公开展示。</p>
                 </div>
               </div>
+              <label
+                >参赛主题<select name="theme" required>
+                  <option value="">请选择一个创作主题</option>
+                  <option value="未来生活想象">未来生活想象</option>
+                  <option value="科技·自然·爱">科技·自然·爱</option>
+                  <option value="假如我穿越了">假如我穿越了</option>
+                </select></label
+              >
+              <p class="hint">
+                每个主题限投1件，每个报名账号最多2件。团队请勿通过多个账号重复投稿，团队报名方式另行公布。
+              </p>
               <label>作品标题<input name="title" maxlength="100" required /></label
               ><label>展示用创作者名称<input name="author" maxlength="60" required /></label
               ><label
-                >创作说明<textarea
+                >作品阐述 · 200字以内<textarea
                   name="description"
-                  maxlength="3000"
+                  maxlength="200"
+                  required
                   rows="4"
-                  placeholder="作品的想法、使用的 AI 工具，以及你想传达的故事"
+                  placeholder="描述作品的想法，以及你想传达的故事"
                 ></textarea></label
-              ><label id="videoLabel"
+              ><label
+                >所用AI工具<input
+                  name="aiTools"
+                  maxlength="200"
+                  placeholder="填写实际使用的工具名称"
+                  required
+              /></label>
+              <label
+                >简单创作流程<textarea
+                  name="creationProcess"
+                  maxlength="1000"
+                  rows="3"
+                  placeholder="简述生成、剪辑与后期处理过程"
+                  required
+                ></textarea>
+              </label>
+              <label id="videoLabel"
                 >视频作品<input
                   id="videoFile"
                   aria-describedby="videoHint"
                   type="file"
-                  accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm"
+                  accept="video/mp4,video/quicktime,.mp4,.mov"
               /></label>
               <p class="hint" id="videoHint"></p>
               <div class="upload-progress" id="uploadProgress" hidden>
@@ -271,7 +587,7 @@
           </div>
           <aside class="participation-aside panel">
             <span class="pill">参与指南</span>
-            <h3 id="eventName">AI 不喊 CUT · 未来影像大赛</h3>
+            <h3 id="eventName">AIGC未来影像大赛</h3>
             <p id="eventGuide">
               先提交身份材料，再上传影像作品。资格核验与作品审核通过后，作品进入公开广场。
             </p>
@@ -281,9 +597,11 @@
               保留原文件，重新选择同一个文件即可继续上传。手机上传期间请保持页面打开，避免锁屏。
             </p>
             <h4>提交后去哪看？</h4>
-            <p>在“我的参与”查看报名编号、审核进度和修改意见。</p>
-            <a class="text-link" href="#account">查看我的参与 →</a>
-            <p class="hint" id="rulesNote">当前为建设预览，投稿时间和赛事细则待确认后公布。</p>
+            <p>在“我的作品”查看报名编号、审核进度和修改意见。</p>
+            <a class="text-link" href="#account">查看我的作品 →</a>
+            <p class="hint" id="rulesNote">
+              报名10月21—28日，投票10月25—30日；当前为建设预览，公众号接入待完成。
+            </p>
           </aside>
         </div>
       </section>
@@ -305,24 +623,51 @@
       <section data-page="account" class="page content-page" hidden>
         <div class="section-heading">
           <div>
-            <div class="eyebrow muted">MY PARTICIPATION</div>
-            <h1 class="page-title">我的报名与作品</h1>
+            <div class="eyebrow muted">MY WORKS</div>
+            <h1 class="page-title">我的作品</h1>
           </div>
           <button class="button outline" id="refreshAccount">刷新进度 ↻</button>
         </div>
         <div id="accountContent"></div>
       </section>
     </main>
-    <footer>
-      <a class="brand" href="#home"
-        ><img
-          class="brand-logo"
-          src="assets/qianwan-mega-logo.png"
-          width="780"
-          height="238"
-          alt="前湾印象城MEGA"
-        /><span aria-hidden="true">前湾印象城MEGA</span></a
-      ><span>前湾印象城MEGA · AI 不喊 CUT</span><a href="admin.html">工作人员入口 ↗</a>
+    <footer class="festival-footer">
+      <div class="footer-top">
+        <a href="#home" class="footer-festival">2026 SCPG AI FESTIVAL</a>
+      </div>
+      <div class="partner-list" aria-label="活动品牌，印力优先">
+        <div class="partner-primary">
+          <a
+            href="https://www.scpgroup.com/about/overview"
+            target="_blank"
+            rel="noopener"
+            aria-label="印力集团官网（新窗口打开）"
+          >
+            <img
+              class="scpg-logo"
+              src="assets/scpg-logo.png"
+              width="121"
+              height="54"
+              alt="印力 SCPG"
+              loading="lazy"
+            />
+          </a>
+        </div>
+        <div class="partner-official">
+          <img
+            class="printing-logo"
+            src="assets/printing-factory-logo.png"
+            width="953"
+            height="656"
+            alt="印刷厂Logo"
+            loading="lazy"
+          />
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <span>AIGC未来影像大赛 · 印力科技生活节 2026 SCPG AI FESTIVAL</span
+        ><a href="admin.html">工作人员入口 ↗</a>
+      </div>
     </footer>
     <dialog id="loginDialog">
       <button type="button" class="dialog-close" data-close aria-label="关闭登录窗口">×</button>
@@ -350,6 +695,25 @@
       <p id="loginDataNote">
         登录自动识别微信账号，昵称和头像以微信实际授权结果为准；真实姓名和手机号在报名时填写。
       </p>
+      <div class="login-divider"><span>或</span></div>
+      <section id="demoLoginPane" hidden>
+        <div class="eyebrow muted">DEMO ACCESS · 演示体验</div>
+        <p class="hint">
+          演示环境：输入任意昵称即可作为参与者体验完整流程（报名、上传、投票、评分）。所有数据均为虚构，不影响正式活动。
+        </p>
+        <form id="demoLoginForm" class="login-form">
+          <label
+            >体验昵称<input
+              id="demoAlias"
+              value="演示参与者"
+              maxlength="30"
+              autocomplete="off"
+              required
+          /></label>
+          <button class="button dark" type="submit">进入体验 →</button>
+          <p id="demoLoginHint" class="hint" role="status"></p>
+        </form>
+      </section>
     </dialog>
     <dialog id="privacyDialog">
       <button type="button" class="dialog-close" data-close>×</button>
@@ -361,7 +725,7 @@
         作品通过审核后，展示作品标题、创作者名称、创作说明、视频及投票/评分结果。请确保你拥有投稿所需的使用权。
       </p>
       <p>
-        当前为建设预览，请使用虚构身份和测试文件。正式开放前会补充实际运营主体、咨询方式、材料保留期限和完整赛事规则。
+        当前为建设预览，请使用虚构身份和测试文件。正式开放前会补充实际运营主体、材料保留期限和完整赛事规则。
       </p>
     </dialog>
     <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>

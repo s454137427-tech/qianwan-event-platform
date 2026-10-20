@@ -2,6 +2,7 @@ FROM node:24-alpine
 WORKDIR /app
 RUN npm install --global pnpm@11.25.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches ./patches
 RUN pnpm install --prod --frozen-lockfile --ignore-scripts
 COPY server.js ./
 COPY lib ./lib

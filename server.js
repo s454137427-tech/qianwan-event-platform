@@ -16,7 +16,7 @@ async function start() {
     throw error;
   }
   console.log(
-    `前湾印象城MEGA：${platform.config.origin}\n后台：${platform.config.origin}/admin.html\n模式：${platform.config.production ? '正式环境' : '本地预览'}`
+    `上海虹桥前湾印象城MEGA：${platform.config.origin}\n后台：${platform.config.origin}/admin.html\n模式：${platform.config.production ? '正式环境' : '本地预览'}`
   );
   let stopping = false;
   function stop() {

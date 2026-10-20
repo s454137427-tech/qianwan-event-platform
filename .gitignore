@@ -14,6 +14,7 @@ deploy/nginx.container.conf
 deploy/wechat-verification/*
 !deploy/wechat-verification/.gitkeep
 data/
+测试视频/
 public/
 client-review/
 review-package-*/
@@ -30,4 +31,7 @@ preview/
 /scripts/build-client-preview.mjs
 /deploy/*.md
 !/deploy/接入与验收.md
+!/deploy/阿里云OSS接入.md
+!/deploy/火山TOS接入.md
+/.tos-sdk-patch/
 /deploy/nginx.conf.example
