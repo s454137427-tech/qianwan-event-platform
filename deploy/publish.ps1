@@ -47,8 +47,12 @@ if (-not $Git) {
 }
 
 # Windows built-in tar is bsdtar and rejects --force-local; use PortableGit GNU tar.
-$Tar = "D:\LenovoSoftstore\Install\WorkBuddy\resources\vendor\PortableGit\usr\bin\tar.exe"
+# tar spawns gzip as a child, so PortableGit\usr\bin must be on PATH or it fails
+# with "gzip: command not found".
+$GitUsr = "D:\LenovoSoftstore\Install\WorkBuddy\resources\vendor\PortableGit\usr\bin"
+$Tar = Join-Path $GitUsr "tar.exe"
 if (-not (Test-Path $Tar)) { throw "GNU tar not found at $Tar" }
+$env:PATH = $GitUsr + ";" + $env:PATH
 
 $Ssh = "C:\Windows\System32\OpenSSH\ssh.exe"
 $Scp = "C:\Windows\System32\OpenSSH\scp.exe"
@@ -94,7 +98,9 @@ if (-not $SkipPush) {
 Write-Host ""
 Write-Host "[2/4] package working tree"
 $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-$pkg = Join-Path $env:TEMP "qianwan-$stamp.tar.gz"
+$pkgWin = Join-Path $env:TEMP "qianwan-$stamp.tar.gz"
+# GNU tar wants forward slashes, scp must not see a drive-letter colon.
+$pkgTar = $pkgWin.Replace('\', '/')
 
 & $Tar --force-local `
   --exclude="deploy/.env.production" `
@@ -102,18 +108,26 @@ $pkg = Join-Path $env:TEMP "qianwan-$stamp.tar.gz"
   --exclude="deploy/data" `
   --exclude="deploy/wechat-verification" `
   --exclude="deploy/nginx.container.conf" `
-  -czf $pkg `
+  -czf $pkgTar `
   Dockerfile lib package.json patches pnpm-lock.yaml pnpm-workspace.yaml scripts server.js web deploy
 if ($LASTEXITCODE -ne 0) { throw "tar failed" }
-$mb = [math]::Round((Get-Item $pkg).Length / 1MB, 2)
-Write-Host "      $pkg ($mb MB)"
+$mb = [math]::Round((Get-Item $pkgWin).Length / 1MB, 2)
+Write-Host "      $pkgWin ($mb MB)"
 
 # ---------- 3. upload ----------
+# Run scp from the temp dir with a bare filename: Win32 scp treats any path
+# containing a colon as host:path, so "C:\..." would be read as host "C".
 Write-Host ""
 Write-Host "[3/4] upload to server"
-& $Scp -o StrictHostKeyChecking=accept-new $pkg "${Server}:/root/"
-if ($LASTEXITCODE -ne 0) { throw "scp failed" }
-$remotePkg = "/root/" + (Split-Path $pkg -Leaf)
+$pkgName = Split-Path $pkgWin -Leaf
+Push-Location $env:TEMP
+try {
+  & $Scp -o StrictHostKeyChecking=accept-new $pkgName "${Server}:/root/"
+  if ($LASTEXITCODE -ne 0) { throw "scp failed" }
+} finally {
+  Pop-Location
+}
+$remotePkg = "/root/$pkgName"
 
 # ---------- 4. deploy ----------
 Write-Host ""
