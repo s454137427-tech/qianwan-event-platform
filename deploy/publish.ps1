@@ -158,6 +158,7 @@ Write-Host ""
 Write-Host "Done. https://mega.gynnai.com/  (hard refresh with Ctrl+F5)"
 
 # ---------- 5. verify ----------
+$ProgressPreference = 'SilentlyContinue'
 try {
   $r = Invoke-WebRequest -Uri "https://mega.gynnai.com/" -UseBasicParsing -TimeoutSec 20
   Write-Host "Verify: HTTP $($r.StatusCode), $($r.Content.Length) bytes"
