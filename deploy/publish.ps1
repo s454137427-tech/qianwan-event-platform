@@ -147,7 +147,11 @@ docker compose --env-file .env.production -f compose.yaml -f compose.volcengine.
 rm -f $remotePkg
 "@
 
-$remoteScript | & $Ssh -o StrictHostKeyChecking=accept-new $Server "bash -s"
+# A CRLF anywhere in this script breaks the remote side ("cd: $'/root/app\r'"),
+# and the file itself is stored with CRLF for Windows editors.
+$remoteScript = $remoteScript.Replace("`r`n", "`n")
+# tr as a second line of defence: bash on the server rejects \r in every command.
+$remoteScript | & $Ssh -o StrictHostKeyChecking=accept-new $Server "tr -d '\r' | bash -s"
 if ($LASTEXITCODE -ne 0) { throw "remote deploy failed" }
 
 Write-Host ""
