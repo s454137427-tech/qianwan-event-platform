@@ -54,11 +54,16 @@ $Tar = Join-Path $GitUsr "tar.exe"
 if (-not (Test-Path $Tar)) { throw "GNU tar not found at $Tar" }
 $env:PATH = $GitUsr + ";" + $env:PATH
 
-$Ssh = "C:\Windows\System32\OpenSSH\ssh.exe"
-$Scp = "C:\Windows\System32\OpenSSH\scp.exe"
-foreach ($t in @($Ssh, $Scp)) { if (-not (Test-Path $t)) { throw "OpenSSH not found: $t" } }
+# Prefer PortableGit's own ssh/scp: they share the same vendor dir as tar and
+# proved reliable, whereas C:\Windows\System32\OpenSSH sometimes exits 255 with
+# no message at all (seen 2026-10-28). Fall back to the Windows build if absent.
+$Ssh = Join-Path $GitUsr "ssh.exe"
+$Scp = Join-Path $GitUsr "scp.exe"
+if (-not (Test-Path $Ssh)) { $Ssh = "C:\Windows\System32\OpenSSH\ssh.exe" }
+if (-not (Test-Path $Scp)) { $Scp = "C:\Windows\System32\OpenSSH\scp.exe" }
+foreach ($t in @($Ssh, $Scp)) { if (-not (Test-Path $t)) { throw "ssh/scp not found: $t" } }
 
-# force git to use Windows ssh (reads %USERPROFILE%\.ssh\id_ed25519)
+# force git to use that ssh too (it reads %USERPROFILE%\.ssh\id_ed25519)
 $env:GIT_SSH_COMMAND = "`"$Ssh`""
 
 # The host sets HTTP_PROXY/HTTPS_PROXY, which git honours above its own config
