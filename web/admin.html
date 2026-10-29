@@ -34,8 +34,63 @@
       #pickCount {
         font-size: 12px;
       }
+      dialog.file-panel {
+        width: min(720px, 92vw);
+        max-height: 84vh;
+        padding: 22px;
+        border: 1px solid rgba(0, 0, 0, 0.12);
+        border-radius: 16px;
+        background: #fff;
+        color: inherit;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.2);
+      }
+      dialog.file-panel::backdrop {
+        background: rgba(16, 14, 24, 0.45);
+      }
+      .file-panel-head {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 16px;
+      }
+      .file-panel-head h2 {
+        margin: 0 0 4px;
+        font-size: 18px;
+      }
+      .file-panel-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin: 14px 0;
+      }
+      .file-list {
+        max-height: 44vh;
+        overflow: auto;
+        border-top: 1px solid rgba(0, 0, 0, 0.08);
+      }
+      .file-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 9px 2px;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+        font-size: 13px;
+      }
+      .file-row span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .file-row small {
+        flex: none;
+        color: var(--muted);
+      }
+      .file-row a {
+        flex: none;
+      }
     </style>
-    <script src="admin.js?v=20261029-export" defer></script>
+    <script src="admin.js?v=20261029-files" defer></script>
   </head>
   <body>
     <div class="preview-bar" id="previewBar" hidden>
@@ -108,6 +163,12 @@
           ><span id="pickCount" class="hint">已选 0 件</span
           ><button id="exportPickedWorks" class="button small mint" type="button" disabled>
             导出所选作品 ↓
+          </button
+          ><button id="downloadPickedFiles" class="button small outline" type="button" disabled>
+            下载所选原片 ↓
+          </button
+          ><button id="downloadAllFiles" class="button small outline" type="button">
+            下载全部原片 ↓
           </button>
         </div>
         <div id="adminRows" class="admin-list"></div>
@@ -222,6 +283,25 @@
         <div id="auditList"></div>
       </section>
     </main>
+    <dialog id="filePanel" class="file-panel">
+      <div class="file-panel-head">
+        <div>
+          <h2>下载作品原片</h2>
+          <p id="filePanelSummary" class="hint" role="status" aria-live="polite">
+            正在生成下载链接…
+          </p>
+        </div>
+        <button id="filePanelClose" class="button small outline" type="button">关闭</button>
+      </div>
+      <p class="hint">
+        链接由对象存储直发，24 小时内有效，可断点续传。点“全部下载”后浏览器可能询问“是否允许下载多个文件”，请选择允许。
+      </p>
+      <div class="file-panel-actions">
+        <button id="panelDownloadAll" class="button mint" type="button" disabled>全部下载</button
+        ><button id="panelCopyLinks" class="button small outline" type="button">复制全部链接</button>
+      </div>
+      <div id="fileList" class="file-list"></div>
+    </dialog>
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
   </body>
 </html>

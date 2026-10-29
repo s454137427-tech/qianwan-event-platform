@@ -13,7 +13,8 @@ const state = {
   mode: 'applications',
   page: 1,
   overview: null,
-  picked: new Set()
+  picked: new Set(),
+  files: []
 };
 let toastTimer,
   listGeneration = 0;
@@ -162,7 +163,8 @@ async function loadList() {
 function updatePicked() {
   const boxes = [...document.querySelectorAll('.work-pick')],
     all = $('pickAllWorks'),
-    button = $('exportPickedWorks');
+    button = $('exportPickedWorks'),
+    files = $('downloadPickedFiles');
   all.checked = boxes.length > 0 && boxes.every((box) => box.checked);
   all.indeterminate = !all.checked && state.picked.size > 0;
   $('pickCount').textContent = `已选 ${state.picked.size} 件`;
@@ -170,6 +172,59 @@ function updatePicked() {
   button.textContent = state.picked.size
     ? `导出所选 ${state.picked.size} 件作品 ↓`
     : '导出所选作品 ↓';
+  files.disabled = state.picked.size === 0;
+  files.textContent = state.picked.size
+    ? `下载所选原片 ${state.picked.size} 件 ↓`
+    : '下载所选原片 ↓';
+}
+function saveName(name) {
+  // Keep the download name legible on Windows/macOS without breaking the URL.
+  return String(name || 'work').replace(/[\\/:*?"<>|]/g, '_');
+}
+async function openFilePanel(ids) {
+  const panel = $('filePanel');
+  state.files = [];
+  $('fileList').innerHTML = '';
+  $('filePanelSummary').textContent = '正在生成下载链接…';
+  $('panelDownloadAll').disabled = true;
+  if (!panel.open) panel.showModal();
+  const query = new URLSearchParams({ competition: $('adminCompetition').value });
+  if (ids && ids.length) query.set('ids', ids.join(','));
+  try {
+    const data = await api(`/api/admin/export/works-files?${query}`);
+    state.files = data.items;
+    $('filePanelSummary').textContent =
+      `共 ${data.items.length} 个文件 · ${formatBytes(data.totalBytes)} · ` +
+      (data.expiresIn ? '链接 24 小时有效' : '直接读取本地存储');
+    $('fileList').innerHTML = data.items
+      .map(
+        (file) =>
+          `<div class="file-row"><span title="${esc(file.name)}">${esc(saveName(file.name))}</span><small>${formatBytes(file.size)}</small><a class="button small outline" href="${esc(file.url)}" download="${esc(saveName(file.name))}" rel="noopener">下载 ↓</a></div>`
+      )
+      .join('');
+    $('panelDownloadAll').disabled = false;
+  } catch (e) {
+    $('filePanelSummary').textContent = e.message;
+  }
+}
+async function downloadEveryFile() {
+  const files = state.files || [];
+  if (!files.length) return;
+  const button = $('panelDownloadAll');
+  button.disabled = true;
+  for (let i = 0; i < files.length; i++) {
+    const link = document.createElement('a');
+    link.href = files[i].url;
+    link.download = saveName(files[i].name);
+    link.rel = 'noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    $('filePanelSummary').textContent = `正在提交下载 ${i + 1}/${files.length}…`;
+    await new Promise((resolve) => setTimeout(resolve, 350));
+  }
+  $('filePanelSummary').textContent = `已提交 ${files.length} 个文件，进度见浏览器下载列表。`;
+  button.disabled = false;
 }
 function formatBytes(bytes) {
   if (!bytes) return '0 MB';
@@ -292,6 +347,26 @@ $('exportPickedWorks').addEventListener('click', () => {
   const type = $('adminCompetition').value,
     ids = [...state.picked].join(',');
   window.location.href = `api/admin/export/works?competition=${type}&ids=${encodeURIComponent(ids)}`;
+});
+$('downloadPickedFiles').addEventListener('click', () => {
+  if (!state.picked.size) return toast('请先勾选要下载的作品');
+  openFilePanel([...state.picked]);
+});
+$('downloadAllFiles').addEventListener('click', () => openFilePanel([]));
+$('panelDownloadAll').addEventListener('click', downloadEveryFile);
+$('panelCopyLinks').addEventListener('click', async () => {
+  const text = (state.files || []).map((file) => `${file.name}\t${file.url}`).join('\n');
+  if (!text) return toast('还没有可复制的链接');
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('已复制全部下载链接');
+  } catch {
+    toast('浏览器拒绝访问剪贴板，请用单个“下载”按钮');
+  }
+});
+$('filePanelClose').addEventListener('click', () => $('filePanel').close());
+$('filePanel').addEventListener('click', (e) => {
+  if (e.target === $('filePanel')) $('filePanel').close();
 });
 $('reloadAdmin').addEventListener(
   'click',
