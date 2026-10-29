@@ -89,8 +89,25 @@
       .file-row a {
         flex: none;
       }
+      .file-progress {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 12px;
+      }
+      .file-progress progress {
+        flex: 1;
+        height: 10px;
+        accent-color: var(--purple);
+      }
+      .file-progress span {
+        flex: none;
+        font-size: 12px;
+        color: var(--muted);
+        font-variant-numeric: tabular-nums;
+      }
     </style>
-    <script src="admin.js?v=20261029-files" defer></script>
+    <script src="admin.js?v=20261029-folder" defer></script>
   </head>
   <body>
     <div class="preview-bar" id="previewBar" hidden>
@@ -294,11 +311,20 @@
         <button id="filePanelClose" class="button small outline" type="button">关闭</button>
       </div>
       <p class="hint">
-        链接由对象存储直发，24 小时内有效，可断点续传。点“全部下载”后浏览器可能询问“是否允许下载多个文件”，请选择允许。
+        链接由对象存储直发，24 小时内有效，可断点续传。<strong>推荐用“保存到文件夹”</strong>：浏览器会弹出目录选择框，选定后把每个原片直接写入该目录，不受“多文件下载”拦截，也不会改名。
       </p>
       <div class="file-panel-actions">
-        <button id="panelDownloadAll" class="button mint" type="button" disabled>全部下载</button
+        <button id="panelSaveFolder" class="button mint" type="button" disabled>
+          保存到文件夹（推荐）
+        </button
+        ><button id="panelDownloadAll" class="button small outline" type="button" disabled>
+          逐个下载
+        </button
         ><button id="panelCopyLinks" class="button small outline" type="button">复制全部链接</button>
+      </div>
+      <div id="fileProgress" class="file-progress" hidden>
+        <progress id="fileProgressBar" value="0" max="100"></progress>
+        <span id="fileProgressText" class="hint" role="status" aria-live="polite"></span>
       </div>
       <div id="fileList" class="file-list"></div>
     </dialog>

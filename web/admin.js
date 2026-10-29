@@ -187,6 +187,8 @@ async function openFilePanel(ids) {
   $('fileList').innerHTML = '';
   $('filePanelSummary').textContent = '正在生成下载链接…';
   $('panelDownloadAll').disabled = true;
+  $('panelSaveFolder').disabled = true;
+  $('fileProgress').hidden = true;
   if (!panel.open) panel.showModal();
   const query = new URLSearchParams({ competition: $('adminCompetition').value });
   if (ids && ids.length) query.set('ids', ids.join(','));
@@ -203,9 +205,90 @@ async function openFilePanel(ids) {
       )
       .join('');
     $('panelDownloadAll').disabled = false;
+    $('panelSaveFolder').disabled = false;
   } catch (e) {
     $('filePanelSummary').textContent = e.message;
   }
+}
+function showProgress(done, total, bytes, totalBytes, label) {
+  const percent = totalBytes ? Math.min(100, Math.round((bytes / totalBytes) * 100)) : 0;
+  $('fileProgress').hidden = false;
+  $('fileProgressBar').value = percent;
+  $('fileProgressText').textContent =
+    `${done}/${total} 个 · ${formatBytes(bytes)} / ${formatBytes(totalBytes)} · ${percent}%` +
+    (label ? ` · ${label}` : '');
+}
+// Chrome counts programmatic <a download> clicks as "multiple automatic downloads"
+// and blocks everything after the first one, so a loop can never fetch 27 files.
+// Writing into a user-picked directory goes through the File System Access API
+// instead, which has no such quota and keeps every original file name.
+async function saveToFolder() {
+  const files = state.files || [];
+  if (!files.length) return;
+  if (typeof window.showDirectoryPicker !== 'function') {
+    return toast('当前浏览器不支持写入文件夹，请改用 Chrome / Edge，或点“逐个下载”');
+  }
+  let dir;
+  try {
+    dir = await window.showDirectoryPicker({ id: 'qianwan-works', mode: 'readwrite' });
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('无法选择文件夹：' + e.message);
+    return;
+  }
+  const saveButton = $('panelSaveFolder'),
+    eachButton = $('panelDownloadAll'),
+    totalBytes = files.reduce((sum, file) => sum + file.size, 0),
+    failed = [];
+  let bytes = 0,
+    finished = 0;
+  saveButton.disabled = true;
+  eachButton.disabled = true;
+  showProgress(0, files.length, 0, totalBytes, '准备中');
+  try {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      let writable = null;
+      try {
+        const handle = await dir.getFileHandle(saveName(file.name), { create: true });
+        writable = await handle.createWritable();
+        const response = await fetch(file.url);
+        if (!response.ok || !response.body) throw new Error('HTTP ' + response.status);
+        const reader = response.body.getReader();
+        let pending = [],
+          pendingBytes = 0;
+        // Buffer ~4MB before each disk write; per-chunk awaits would mean tens of
+        // thousands of round trips for a 4GB export.
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          pending.push(value);
+          pendingBytes += value.byteLength;
+          bytes += value.byteLength;
+          if (pendingBytes >= 4 * 1024 * 1024) {
+            await writable.write(new Blob(pending));
+            pending = [];
+            pendingBytes = 0;
+          }
+          showProgress(i, files.length, bytes, totalBytes, file.name);
+        }
+        if (pendingBytes) await writable.write(new Blob(pending));
+        await writable.close();
+        writable = null;
+        finished++;
+        showProgress(finished, files.length, bytes, totalBytes, file.name);
+      } catch (e) {
+        if (writable) await writable.abort().catch(() => {});
+        failed.push(`${file.name}（${e.message}）`);
+      }
+    }
+  } finally {
+    saveButton.disabled = false;
+    eachButton.disabled = false;
+  }
+  $('filePanelSummary').textContent = failed.length
+    ? `完成 ${finished} 个，失败 ${failed.length} 个：${failed.join('；')}`
+    : `已把 ${finished} 个原片保存到所选文件夹（共 ${formatBytes(totalBytes)}）。`;
+  toast(failed.length ? '有文件未保存，详见面板提示' : '全部原片已保存到文件夹');
 }
 async function downloadEveryFile() {
   const files = state.files || [];
@@ -354,6 +437,7 @@ $('downloadPickedFiles').addEventListener('click', () => {
 });
 $('downloadAllFiles').addEventListener('click', () => openFilePanel([]));
 $('panelDownloadAll').addEventListener('click', downloadEveryFile);
+$('panelSaveFolder').addEventListener('click', saveToFolder);
 $('panelCopyLinks').addEventListener('click', async () => {
   const text = (state.files || []).map((file) => `${file.name}\t${file.url}`).join('\n');
   if (!text) return toast('还没有可复制的链接');
