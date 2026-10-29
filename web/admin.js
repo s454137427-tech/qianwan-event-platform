@@ -7,7 +7,14 @@ const $ = (id) => document.getElementById(id),
     );
 const label = { draft: '草稿', pending: '待审核', approved: '已通过', rejected: '退回修改' },
   roles = { admin: '管理员', reviewer: '审核员', judge: '评委' };
-const state = { user: null, csrf: null, mode: 'applications', page: 1, overview: null };
+const state = {
+  user: null,
+  csrf: null,
+  mode: 'applications',
+  page: 1,
+  overview: null,
+  picked: new Set()
+};
 let toastTimer,
   listGeneration = 0;
 function toast(message) {
@@ -126,9 +133,14 @@ async function loadList() {
     mode === 'works'
       ? `api/admin/export/works?competition=${type}`
       : `api/admin/export?competition=${type}`;
-  $('exportButton').textContent = mode === 'works' ? '导出作品与实时成绩 ↓' : '导出报名名单 ↓';
+  $('exportButton').textContent = mode === 'works' ? '导出全部作品 ↓' : '导出报名名单 ↓';
   const review = ['admin', 'reviewer'].includes(state.user.role),
-    grade = ['admin', 'judge'].includes(state.user.role);
+    grade = ['admin', 'judge'].includes(state.user.role),
+    canExport = ['admin', 'reviewer'].includes(state.user.role);
+  // 勾选只对当前这一页有效，翻页 / 换赛事 / 换状态时清空，避免误导出。
+  state.picked.clear();
+  $('worksExportBar').hidden = mode !== 'works' || !canExport;
+  if (mode === 'works' && canExport) updatePicked();
   $('adminRows').innerHTML = data.items.length
     ? data.items
         .map((r) => {
@@ -138,7 +150,7 @@ async function loadList() {
             body = `<h3>${esc(p.realName || '未命名草稿')}</h3><p>${esc(p.realName)} · ${esc(p.phone)} · ${esc(p.school)}</p><p>编号 ${esc(r.id)}</p><p>${esc(p.idType)} · ${esc(p.idNumber)}</p>${p.identityId ? `<a href="api/media/${p.identityId}" target="_blank" rel="noopener"><img class="identity-preview" src="api/media/${p.identityId}" alt="私有身份证明材料"></a>` : ''}`;
           } else
             body = `<h3>${esc(r.title)}</h3><p>@${esc(r.author)} · ${r.votes} 票 · 评委平均 ${Number(r.judge_score).toFixed(1)}</p>${r.theme ? `<p>参赛主题：${esc(r.theme)}</p>` : ''}<p>${esc(r.description)}</p>${r.ai_tools ? `<p>AI工具：${esc(r.ai_tools)}</p>` : ''}${r.creation_process ? `<p>创作流程：${esc(r.creation_process)}</p>` : ''}${r.videoUrl ? `<video controls preload="none" playsinline src="${r.videoUrl}"></video>` : '<p>文字 / 现场实物展示成果</p>'}`;
-          return `<article class="admin-record" data-id="${r.id}"><span class="status ${r.status}">${label[r.status]}</span>${body}${r.note ? `<p class="hint error">退回意见：${esc(r.note)}</p>` : ''}${review && r.status !== 'draft' ? '<label>审核备注 / 退回原因<textarea class="review-note" rows="2" maxlength="500"></textarea></label><div class="actions"><button class="button small mint" data-review="approved">审核通过</button><button class="button small danger" data-review="rejected">退回修改</button></div>' : ''}${mode === 'applications' && state.user.role === 'admin' && r.user_id ? `<div class="actions"><button class="button small outline" data-reset-password="${r.user_id}">重置登录密码</button></div>` : ''}${mode === 'works' && grade && r.status === 'approved' ? `<div class="actions"><input class="score-box" type="number" min="0" max="100" step="0.1" aria-label="我的评分" value="${r.myScore ?? ''}"><button class="button small outline" data-score>保存我的评分</button></div>` : ''}</article>`;
+          return `<article class="admin-record" data-id="${r.id}"><span class="status ${r.status}">${label[r.status]}</span>${mode === 'works' && canExport ? `<label class="work-pick-row"><input type="checkbox" class="work-pick" value="${r.id}"><span>勾选</span></label>` : ''}${body}${r.note ? `<p class="hint error">退回意见：${esc(r.note)}</p>` : ''}${review && r.status !== 'draft' ? '<label>审核备注 / 退回原因<textarea class="review-note" rows="2" maxlength="500"></textarea></label><div class="actions"><button class="button small mint" data-review="approved">审核通过</button><button class="button small danger" data-review="rejected">退回修改</button></div>' : ''}${mode === 'applications' && state.user.role === 'admin' && r.user_id ? `<div class="actions"><button class="button small outline" data-reset-password="${r.user_id}">重置登录密码</button></div>` : ''}${mode === 'works' && grade && r.status === 'approved' ? `<div class="actions"><input class="score-box" type="number" min="0" max="100" step="0.1" aria-label="我的评分" value="${r.myScore ?? ''}"><button class="button small outline" data-score>保存我的评分</button></div>` : ''}</article>`;
         })
         .join('')
     : '<div class="empty"><h3>这里暂时没有记录。</h3><p>可以切换赛事或状态查看。</p></div>';
@@ -146,6 +158,18 @@ async function loadList() {
     `${state.page} / ${Math.max(1, Math.ceil(data.total / 20))} · ${data.total} 条记录`;
   $('adminPrev').disabled = state.page <= 1;
   $('adminNext').disabled = state.page * 20 >= data.total;
+}
+function updatePicked() {
+  const boxes = [...document.querySelectorAll('.work-pick')],
+    all = $('pickAllWorks'),
+    button = $('exportPickedWorks');
+  all.checked = boxes.length > 0 && boxes.every((box) => box.checked);
+  all.indeterminate = !all.checked && state.picked.size > 0;
+  $('pickCount').textContent = `已选 ${state.picked.size} 件`;
+  button.disabled = state.picked.size === 0;
+  button.textContent = state.picked.size
+    ? `导出所选 ${state.picked.size} 件作品 ↓`
+    : '导出所选作品 ↓';
 }
 function formatBytes(bytes) {
   if (!bytes) return '0 MB';
@@ -245,6 +269,30 @@ $('adminNext').addEventListener(
     await loadList();
   })
 );
+$('adminRows').addEventListener('change', (e) => {
+  const box = e.target.closest('.work-pick');
+  if (!box) return;
+  if (box.checked) state.picked.add(box.value);
+  else state.picked.delete(box.value);
+  box.closest('.admin-record')?.classList.toggle('is-picked', box.checked);
+  updatePicked();
+});
+$('pickAllWorks').addEventListener('change', (e) => {
+  const on = e.target.checked;
+  document.querySelectorAll('.work-pick').forEach((box) => {
+    box.checked = on;
+    if (on) state.picked.add(box.value);
+    else state.picked.delete(box.value);
+    box.closest('.admin-record')?.classList.toggle('is-picked', on);
+  });
+  updatePicked();
+});
+$('exportPickedWorks').addEventListener('click', () => {
+  if (!state.picked.size) return toast('请先勾选要导出的作品');
+  const type = $('adminCompetition').value,
+    ids = [...state.picked].join(',');
+  window.location.href = `api/admin/export/works?competition=${type}&ids=${encodeURIComponent(ids)}`;
+});
 $('reloadAdmin').addEventListener(
   'click',
   guarded(async () => {
